@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::graph::{EdgeKind, Graph};
+    use crate::graph::{EdgeKind, Graph, ID, NodeID};
 
     #[test]
     fn test_create_graph() {
-        let graph: Graph<i32> = Graph::new();
+        let _graph: Graph<i32> = Graph::new();
     }
 
     #[test]
@@ -35,8 +35,7 @@ mod test {
         let n2 = graph.add_node("B");
         let edge_id = graph.add_edge(n1, n2, "edge_prop", EdgeKind::Directed);
 
-        let edge_prop = graph.get_edge(edge_id);
-        assert_eq!(edge_prop, "edge_prop");
+        assert_eq!(graph.get_edge(edge_id), "edge_prop");
     }
 
     #[test]
@@ -46,8 +45,7 @@ mod test {
         let n2 = graph.add_node(2);
         let edge_id = graph.add_edge(n1, n2, 100, EdgeKind::Undirected);
 
-        let edge_prop = graph.get_edge(edge_id);
-        assert_eq!(edge_prop, 100);
+        assert_eq!(graph.get_edge(edge_id), 100);
     }
 
     #[test]
@@ -64,5 +62,102 @@ mod test {
         assert_eq!(graph.get_edge(e1), 1.5);
         assert_eq!(graph.get_edge(e2), 2.5);
         assert_eq!(graph.get_edge(e3), 3.5);
+    }
+
+    #[test]
+    fn test_add_edge_registers_on_nodes() {
+        let mut graph: Graph<i32> = Graph::new();
+        let n1 = graph.add_node(1);
+        let n2 = graph.add_node(2);
+        let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
+
+        assert!(graph.nodes[n1.get_inner()].edges.contains(&e1));
+        assert!(graph.nodes[n2.get_inner()].edges.contains(&e1));
+    }
+
+    #[test]
+    fn test_delete_existing_edge() {
+        let mut graph: Graph<i32> = Graph::new();
+        let n1 = graph.add_node(1);
+        let n2 = graph.add_node(2);
+        let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
+
+        graph.delete_edge(e1);
+    }
+
+    #[test]
+    fn test_delete_edge_makes_it_inaccessible() {
+        let mut graph: Graph<i32> = Graph::new();
+        let n1 = graph.add_node(1);
+        let n2 = graph.add_node(2);
+        let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
+
+        graph.delete_edge(e1);
+    }
+
+    #[test]
+    fn test_delete_edge_preserves_other_edges() {
+        let mut graph: Graph<i32> = Graph::new();
+        let n1 = graph.add_node(1);
+        let n2 = graph.add_node(2);
+        let n3 = graph.add_node(3);
+
+        let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
+        let e2 = graph.add_edge(n2, n3, 20, EdgeKind::Directed);
+
+        graph.delete_edge(e1);
+
+        assert_eq!(graph.get_edge(e2), 20);
+    }
+
+    #[test]
+    fn test_delete_edge_preserves_nodes() {
+        let mut graph: Graph<i32> = Graph::new();
+        let n1 = graph.add_node(1);
+        let n2 = graph.add_node(2);
+        let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
+
+        graph.delete_edge(e1);
+
+        assert_eq!(graph.get_node(n1), 1);
+        assert_eq!(graph.get_node(n2), 2);
+    }
+
+    #[test]
+    fn test_delete_edge_removes_from_node_edge_lists() {
+        let mut graph: Graph<i32> = Graph::new();
+        let n1 = graph.add_node(1);
+        let n2 = graph.add_node(2);
+        let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
+
+        graph.delete_edge(e1);
+
+        assert!(!graph.nodes[n1.get_inner()].edges.contains(&e1));
+        assert!(!graph.nodes[n2.get_inner()].edges.contains(&e1));
+    }
+
+    #[test]
+    fn test_delete_undirected_edge() {
+        let mut graph: Graph<i32> = Graph::new();
+        let n1 = graph.add_node(1);
+        let n2 = graph.add_node(2);
+        let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Undirected);
+
+        graph.delete_edge(e1);
+    }
+
+    #[test]
+    fn test_delete_all_edges() {
+        let mut graph: Graph<i32> = Graph::new();
+        let n1 = graph.add_node(1);
+        let n2 = graph.add_node(2);
+
+        let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
+        let e2 = graph.add_edge(n1, n2, 20, EdgeKind::Directed);
+        let e3 = graph.add_edge(n1, n2, 30, EdgeKind::Undirected);
+
+        graph.delete_edge(e1);
+        graph.delete_edge(e2);
+        graph.delete_edge(e3);
     }
 }
