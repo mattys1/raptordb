@@ -3,6 +3,7 @@ use derive_more::{From};
 mod id_manager;
 use id_manager::IDManager;
 
+mod tests;
 
 #[derive(Debug)]
 pub struct Graph<T: Copy> {
