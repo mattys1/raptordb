@@ -5,12 +5,12 @@ mod test {
 
     #[test]
     fn test_create_graph() {
-        let _graph: Graph<i32> = Graph::new();
+        let _graph: Graph<i32, i32> = Graph::new();
     }
 
     #[test]
     fn test_add_single_node() {
-        let mut graph: Graph<i32> = Graph::new();
+        let mut graph: Graph<i32, i32> = Graph::new();
         let node_id = graph.add_node(42);
         let property = graph.get_node(node_id);
         assert_eq!(property, 42);
@@ -18,7 +18,7 @@ mod test {
 
     #[test]
     fn test_add_multiple_nodes() {
-        let mut graph: Graph<i32> = Graph::new();
+        let mut graph: Graph<i32, i32> = Graph::new();
         let id1 = graph.add_node(10);
         let id2 = graph.add_node(20);
         let id3 = graph.add_node(30);
@@ -30,7 +30,7 @@ mod test {
 
     #[test]
     fn test_add_directed_edge() {
-        let mut graph: Graph<&str> = Graph::new();
+        let mut graph: Graph<&str, &str> = Graph::new();
         let n1 = graph.add_node("A");
         let n2 = graph.add_node("B");
         let edge_id = graph.add_edge(n1, n2, "edge_prop", EdgeKind::Directed);
@@ -40,7 +40,7 @@ mod test {
 
     #[test]
     fn test_add_undirected_edge() {
-        let mut graph: Graph<i32> = Graph::new();
+        let mut graph: Graph<i32, i32> = Graph::new();
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
         let edge_id = graph.add_edge(n1, n2, 100, EdgeKind::Undirected);
@@ -50,7 +50,7 @@ mod test {
 
     #[test]
     fn test_multiple_edges() {
-        let mut graph: Graph<f64> = Graph::new();
+        let mut graph: Graph<f64, f64> = Graph::new();
         let n1 = graph.add_node(1.0);
         let n2 = graph.add_node(2.0);
         let n3 = graph.add_node(3.0);
@@ -66,7 +66,7 @@ mod test {
 
     #[test]
     fn test_add_edge_registers_on_nodes() {
-        let mut graph: Graph<i32> = Graph::new();
+        let mut graph: Graph<i32, i32> = Graph::new();
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
         let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
@@ -77,7 +77,7 @@ mod test {
 
     #[test]
     fn test_delete_existing_edge() {
-        let mut graph: Graph<i32> = Graph::new();
+        let mut graph: Graph<i32, i32> = Graph::new();
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
         let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
@@ -87,7 +87,7 @@ mod test {
 
     #[test]
     fn test_delete_edge_makes_it_inaccessible() {
-        let mut graph: Graph<i32> = Graph::new();
+        let mut graph: Graph<i32, i32> = Graph::new();
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
         let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
@@ -97,7 +97,7 @@ mod test {
 
     #[test]
     fn test_delete_edge_preserves_other_edges() {
-        let mut graph: Graph<i32> = Graph::new();
+        let mut graph: Graph<i32, i32> = Graph::new();
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
         let n3 = graph.add_node(3);
@@ -112,7 +112,7 @@ mod test {
 
     #[test]
     fn test_delete_edge_preserves_nodes() {
-        let mut graph: Graph<i32> = Graph::new();
+        let mut graph: Graph<i32, i32> = Graph::new();
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
         let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
@@ -125,7 +125,7 @@ mod test {
 
     #[test]
     fn test_delete_edge_removes_from_node_edge_lists() {
-        let mut graph: Graph<i32> = Graph::new();
+        let mut graph: Graph<i32, i32> = Graph::new();
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
         let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
@@ -138,7 +138,7 @@ mod test {
 
     #[test]
     fn test_delete_undirected_edge() {
-        let mut graph: Graph<i32> = Graph::new();
+        let mut graph: Graph<i32, i32> = Graph::new();
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
         let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Undirected);
@@ -148,7 +148,7 @@ mod test {
 
     #[test]
     fn test_delete_all_edges() {
-        let mut graph: Graph<i32> = Graph::new();
+        let mut graph: Graph<i32, i32> = Graph::new();
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
 

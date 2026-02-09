@@ -7,15 +7,15 @@ mod tests;
 
 
 #[derive(Debug)]
-pub struct Graph<T: Copy> {
-    nodes: Vec<Node<T>>,
-    edges: Vec<Edge<T>>, 
+pub struct Graph<V: Copy, E: Copy> {
+    nodes: Vec<Node<V>>,
+    edges: Vec<Edge<E>>, 
 
     node_id_manager: IDManager<NodeID>,
     edge_id_manager: IDManager<EdgeID>,
 }
 
-impl<T: Copy> Graph<T> {
+impl<T: Copy, E: Copy> Graph<T, E> {
     pub fn new() -> Self {
         Self {
             nodes: Vec::new(),
@@ -32,7 +32,7 @@ impl<T: Copy> Graph<T> {
         id
     }
 
-    pub fn add_edge(&mut self, from: NodeID, to: NodeID, property: T, kind: EdgeKind,) -> EdgeID {
+    pub fn add_edge(&mut self, from: NodeID, to: NodeID, property: E, kind: EdgeKind,) -> EdgeID {
         debug_assert!(self.node_id_manager.is_taken(from), "invalid 'from' NodeID: {from:?}");
         debug_assert!(self.node_id_manager.is_taken(to), "invalid 'to' NodeID: {to:?}");
 
@@ -52,7 +52,7 @@ impl<T: Copy> Graph<T> {
         self.nodes[id.get_inner()].property
     }
 
-    pub fn get_edge(&self, id: EdgeID) -> T {
+    pub fn get_edge(&self, id: EdgeID) -> E {
         debug_assert!(self.edge_id_manager.is_taken(id), "invalid EdgeID: {id:?}");
         self.edges[id.get_inner()].property
     }
@@ -71,7 +71,7 @@ impl<T: Copy> Graph<T> {
         debug_assert!(self.edge_id_manager.is_taken(id), "invalid EdgeID: {id:?}");
         let edge = &self.edges[id.get_inner()];
 
-        assert!(edge.from != edge.to, "NOT IMPLEMENTED: cyclical edge deletion - from edge: {:?}, to edge: {:?}", edge.from, edge.to);
+        debug_assert!(edge.from != edge.to, "NOT IMPLEMENTED: cyclical edge deletion - from edge: {:?}, to edge: {:?}", edge.from, edge.to);
         unsafe {
             let [from_node, to_node] = self.nodes.get_disjoint_unchecked_mut([edge.from.get_inner(), edge.to.get_inner()]);
 
