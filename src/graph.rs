@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use derive_more::{From};
 
 mod id_manager;
@@ -6,7 +8,6 @@ use id_manager::IDManager;
 mod tests;
 
 
-#[derive(Debug)]
 pub struct Graph<V: Copy, E: Copy> {
     nodes: Vec<Node<V>>,
     edges: Vec<Edge<E>>, 
@@ -83,11 +84,14 @@ impl<T: Copy, E: Copy> Graph<T, E> {
     }
 }
 
-// impl<T> Display for Graph<T> {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         write!(f, "Graph with nodes:\n{}\nand edges:\n{}", self.nodes.len(), self.edges.len())
-//     }
-// }
+impl<N: Debug + Copy, E: Debug + Copy> Debug for Graph<N, E> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Graph")
+            .field("nodes", &self.nodes)
+            .field("edges", &self.edges)
+            .finish()
+    }
+}
 
 #[derive(Debug)]
 pub enum EdgeKind {

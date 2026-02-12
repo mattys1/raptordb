@@ -1,0 +1,21 @@
+use std::path::Path;
+
+use crate::importer::{import_pbf};
+
+mod graph;
+mod importer;
+
+fn main() {
+    // let graph = Graph::<i64, i64>::new();
+    // println!("Graph created: {graph:?}");
+
+    let workspace_root = String::from("/home/mattys/skrypty-i-syfy/studia/inzynierka/raptorDB/");
+    // let binding = workspace_root + "maps/sacz_mniejszy.osm";
+    let binding = workspace_root + "maps/sacz_mniejszy.osm.pbf";
+    println!("reading from {binding}");
+
+    let map_path = Path::new(binding.as_str());
+    let graph = import_pbf(map_path).expect("fuck");
+    
+    dbg!(graph);
+}
