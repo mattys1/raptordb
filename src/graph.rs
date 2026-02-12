@@ -84,6 +84,12 @@ impl<T: Copy, E: Copy> Graph<T, E> {
     }
 }
 
+impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq, E: Debug + Copy + PartialEq {
+    fn eq(&self, other: &Self) -> bool {
+        self.nodes == other.nodes && self.edges == other.edges
+    }
+}
+
 impl<N: Debug + Copy, E: Debug + Copy> Debug for Graph<N, E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Graph")
@@ -93,20 +99,20 @@ impl<N: Debug + Copy, E: Debug + Copy> Debug for Graph<N, E> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum EdgeKind {
     Directed,
     Undirected
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct Node<T> {
     id: NodeID,
     edges: Vec<EdgeID>,
     property: T,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct Edge<T> {
     id: EdgeID,
     from: NodeID,
