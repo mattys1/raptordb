@@ -1,11 +1,10 @@
 // TODO: the whole thing should eventually become multithreaded
-
 use std::{collections::HashMap, error::Error, fs::File, path::Path};
 
 use derive_more::From;
-use log::{trace, warn};
+use log::warn;
 use osm_xml::OSM;
-use osmpbf::{DenseTagIter, Element, ElementReader, TagIter};
+use osmpbf::{Element, ElementReader};
 
 use crate::graph::{EdgeKind, Graph, NodeID};
 

@@ -1,12 +1,18 @@
-use std::fmt::Debug;
-
-use derive_more::{From};
-
-mod id_manager;
-use id_manager::IDManager;
-
 mod tests;
 
+use std::fmt::Debug;
+
+mod node;
+mod edge;
+mod id_manager;
+use id_manager::IDManager;
+use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
+
+use crate::graph::{edge::{Edge}, node::{Node}};
+
+pub use crate::graph::node::NodeID;
+pub use crate::graph::edge::EdgeID;
+pub use crate::graph::edge::EdgeKind;
 
 pub struct Graph<V: Copy, E: Copy> {
     nodes: Vec<Node<V>>,
@@ -16,7 +22,7 @@ pub struct Graph<V: Copy, E: Copy> {
     edge_id_manager: IDManager<EdgeID>,
 }
 
-impl<T: Copy, E: Copy> Graph<T, E> {
+impl<T, E> Graph<T, E> where T: Copy + PartialEq + Send + Sync, E: Copy + PartialEq + Send + Sync {
     pub fn new() -> Self {
         Self {
             nodes: Vec::new(),
@@ -25,6 +31,14 @@ impl<T: Copy, E: Copy> Graph<T, E> {
             node_id_manager: IDManager::new(),
             edge_id_manager: IDManager::new(),
         }
+    }
+
+    pub fn nodes(&self) -> impl Iterator<Item = NodeID> {
+        self.nodes.iter().filter_map(|n| if self.node_id_manager.is_taken(n.id) { Some(n.id) } else { None })
+    }
+
+    pub fn edges(&self) -> impl Iterator<Item = EdgeID> {
+        self.edges.iter().filter_map(|e| if self.edge_id_manager.is_taken(e.id) { Some(e.id) } else { None })
     }
 
     pub fn add_node(&mut self, property: T) -> NodeID {
@@ -82,6 +96,61 @@ impl<T: Copy, E: Copy> Graph<T, E> {
 
         self.edge_id_manager.mark_as_taken(id);
     }
+
+    pub fn intersection(graph1: &Self, graph2: &Self) -> Self {
+        // add node in g1 and g2 ->
+        // for every edge in g1, check:
+        // is edge in g2? => is `to` in `new_nodes` && is from in `new_nodes` => add_edge
+
+
+        let mut result = Self::new();
+        let new_nodes: Vec<NodeID> = graph1.nodes().par_bridge()
+            .filter_map(|node1| { 
+                if graph2.nodes().par_bridge()
+                    .find_any(|node2| { 
+                        graph2.get_node(*node2) == graph1.get_node(node1) 
+                    }).is_some() {
+                    Some(node1)
+                } else {
+                    None
+                }
+            }).collect();
+
+        let new_edges: Vec<&Edge<E>> = graph1.edges.par_iter()
+            .filter_map(|edge1| {
+                if graph2.edges.par_iter().any(|edge2| {
+                    edge1 == edge2
+                }) &&
+                (new_nodes.par_iter().any(|nn| edge1.from == *nn) &&
+                new_nodes.par_iter().any(|nn| edge1.to == *nn)) {
+                    Some(edge1)
+                } else {
+                    None
+                }
+            }).collect();
+
+        let mut result_ids = Vec::new();
+        #[cfg(debug_assertions)] {
+            result_ids.reserve(new_nodes.len());
+        }
+
+        for nn in new_nodes {
+            let id = result.add_node(graph1.get_node(nn));
+
+            #[cfg(debug_assertions)] {
+                result_ids.push(id);
+            }
+        }
+
+        debug_assert_eq!(result_ids, result.nodes.iter().map(|n| n.id).collect::<Vec<NodeID>>(), "Mismatched graph1 node ids and result node ids, id computing logic should be deterministic and the ids should be ordered the same way");
+
+        for ne in new_edges {
+            result.add_edge(ne.from, ne.to, ne.property, ne.kind);
+        }
+
+       result
+    }
+
 }
 
 impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq, E: Debug + Copy + PartialEq {
@@ -99,42 +168,6 @@ impl<N: Debug + Copy, E: Debug + Copy> Debug for Graph<N, E> {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum EdgeKind {
-    Directed,
-    Undirected
-}
-
-#[derive(Debug, PartialEq)]
-struct Node<T> {
-    id: NodeID,
-    edges: Vec<EdgeID>,
-    property: T,
-}
-
-#[derive(Debug, PartialEq)]
-struct Edge<T> {
-    id: EdgeID,
-    from: NodeID,
-    to: NodeID,
-    kind: EdgeKind,
-    property: T,
-}
-
-#[derive(From, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct NodeID(usize);
-
-#[derive(From, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct EdgeID(usize);
-
 pub(super) trait ID {
     fn get_inner(&self) -> usize;
-}
-
-impl ID for NodeID {
-    fn get_inner(&self) -> usize { self.0 }
-}            
-             
-impl ID for EdgeID {
-    fn get_inner(&self) -> usize { self.0 }
 }

@@ -83,16 +83,8 @@ mod test {
         let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
 
         graph.delete_edge(e1);
-    }
 
-    #[test]
-    fn test_delete_edge_makes_it_inaccessible() {
-        let mut graph: Graph<i32, i32> = Graph::new();
-        let n1 = graph.add_node(1);
-        let n2 = graph.add_node(2);
-        let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
-
-        graph.delete_edge(e1);
+        assert!(!graph.edge_id_manager.is_taken(e1) && !graph.edges().any(|e| e == e1));
     }
 
     #[test]
@@ -137,16 +129,6 @@ mod test {
     }
 
     #[test]
-    fn test_delete_undirected_edge() {
-        let mut graph: Graph<i32, i32> = Graph::new();
-        let n1 = graph.add_node(1);
-        let n2 = graph.add_node(2);
-        let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Undirected);
-
-        graph.delete_edge(e1);
-    }
-
-    #[test]
     fn test_delete_all_edges() {
         let mut graph: Graph<i32, i32> = Graph::new();
         let n1 = graph.add_node(1);
@@ -159,5 +141,7 @@ mod test {
         graph.delete_edge(e1);
         graph.delete_edge(e2);
         graph.delete_edge(e3);
+
+        assert!(graph.edges().next().is_none());
     }
 }
