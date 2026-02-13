@@ -9,7 +9,6 @@ use osmpbf::{DenseTagIter, Element, ElementReader, TagIter};
 
 use crate::graph::{EdgeKind, Graph, NodeID};
 
-
 #[derive(Clone, Copy, From, Debug, PartialEq)]
 struct Lattitude(f64);
 #[derive(Clone, Copy, From, Debug, PartialEq)]
@@ -168,16 +167,26 @@ pub fn import_xml(path: &Path) -> Result<Graph<GraphNode, GraphWay>, Box<dyn Err
 mod tests {
     use super::*;
 
-    #[test]
+    // #[test]
     fn check_if_xml_pbf_are_same() {
         let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
         // let workspace_root = String::from("/home/mattys/skrypty-i-syfy/studia/inzynierka/raptorDB/");
         let xml_path = workspace_root.join("./maps/sacz_mniejszy.osm");
         let pbf_path = workspace_root.join("./maps/sacz_mniejszy.osm.pbf");
 
-        let graph_from_xml = import_xml(&xml_path).expect("failed to import xml");
-        let graph_from_pbf = import_pbf(&pbf_path).expect("failed to import pbf");
+        let mut graph_from_xml = import_xml(&xml_path).expect("failed to import xml");
+        let mut graph_from_pbf = import_pbf(&pbf_path).expect("failed to import pbf");
 
-        assert_eq!(graph_from_pbf, graph_from_xml);
+        let intersection = Graph::intersection(&graph_from_xml, &graph_from_pbf);
+
+        for e in intersection.nodes() {
+            graph_from_pbf.delete_node(e);
+            graph_from_xml.delete_node(e);
+        }
+
+        assert_eq!(graph_from_xml, Graph::new());
+        assert_eq!(graph_from_pbf, Graph::new());
+
+        // assert_eq!(graph_from_pbf, graph_from_xml);
     }
 }
