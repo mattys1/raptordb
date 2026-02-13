@@ -15,6 +15,7 @@ pub use crate::graph::node::NodeID;
 pub use crate::graph::edge::EdgeID;
 pub use crate::graph::edge::EdgeKind;
 
+#[derive(Debug)]
 pub struct Graph<V: Copy, E: Copy> {
     node_store: Store<Node<V>, NodeID>,
     edge_store: Store<Edge<E>, EdgeID>, 
@@ -164,18 +165,14 @@ impl<T, E> Graph<T, E> where T: Copy + PartialEq + Send + Sync, E: Copy + Partia
 
 }
 
-// impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq, E: Debug + Copy + PartialEq {
-//     fn eq(&self, other: &Self) -> bool {
-//         // self.node_store == other.node_store && self.edge_store == other.edge_store
-//     }
-// }
+impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq, E: Debug + Copy + PartialEq {
+    fn eq(&self, other: &Self) -> bool {
+        if(self.node_store.len()) != other.node_store.len() || self.edge_store.len() != other.edge_store.len() {
+            return false;
+        }
 
-impl<N: Debug + Copy, E: Debug + Copy> Debug for Graph<N, E> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Graph")
-            .field("nodes", &self.node_store)
-            .field("edges", &self.edge_store)
-            .finish()
+        self.node_store.all().all(|n| other.node_store.all().any(|on| on.item == n.item)) &&
+        self.edge_store.all().all(|e| other.edge_store.all().any(|oe| oe.item == e.item))
     }
 }
 

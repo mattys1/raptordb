@@ -64,4 +64,8 @@ impl<T: IDIntoUSize + Copy> AvailabilityManager<T> {
 
         self.ids[id.into_usize()]
     }
+
+    pub fn taken_count(&self) -> usize {
+        self.ids.count_ones()
+    }
 }

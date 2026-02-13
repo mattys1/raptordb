@@ -18,7 +18,10 @@ pub(super) struct Edge<T> {
 // TODO: move edge and node comparision into the graph itself, so that elements dependant on id can also be compared
 impl<E> PartialEq for Edge<E> where E: PartialEq {
     fn eq(&self, other: &Self) -> bool {
-        self.kind == other.kind && self.property == other.property
+        self.kind == other.kind && self.property == other.property && match self.kind {
+            EdgeKind::Directed => self.from == other.from && self.to == other.to,
+            EdgeKind::Undirected => (self.from == other.from && self.to == other.to) || (self.from == other.to && self.to == other.from)
+        }
     }
 }
 
