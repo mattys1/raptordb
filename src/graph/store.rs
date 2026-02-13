@@ -8,11 +8,9 @@ pub(super) struct Entry<T, I> {
     pub(super) item: T,
 }
 
-#[derive(Debug)]
 pub(super) struct Store<T, I> {
     items: Vec<Entry<T, I>>,
     availability: AvailabilityManager<I>,
-    // _marker: PhantomData<P>
 }
 
 impl<T, I> Store<T, I> where I: IDIntoUSize + Copy + Debug {
@@ -52,9 +50,22 @@ impl<T, I> Store<T, I> where I: IDIntoUSize + Copy + Debug {
         self.availability.is_taken(id)
     }
 
+    pub(super) fn len(&self) -> usize {
+        self.availability.taken_count()
+    }
+
     // pub fn replace(&mut self, entry: Entry<T, I>) {
     //     debug_assert!(self.availability.is_taken(entry.id), "Trying to get not existing element, id: {id:?}");
     //
     //     self.items[entry.id.get_inner()].item = entry.item
     // }
+}
+
+impl<T, I> Debug for Store<T, I> where T: Debug, I: IDIntoUSize + Copy + Debug {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Store")
+            .field("items", &self.items.iter().filter(|en| self.availability.is_taken(en.id)).collect::<Vec<_>>())
+            .finish()
+    }
+    
 }
