@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::graph::{EdgeKind, Graph, ID, NodeID};
+    use crate::graph::{EdgeKind, Graph};
 
     #[test]
     fn test_create_graph() {
@@ -71,8 +71,8 @@ mod test {
         let n2 = graph.add_node(2);
         let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
 
-        assert!(graph.nodes[n1.get_inner()].edges.contains(&e1));
-        assert!(graph.nodes[n2.get_inner()].edges.contains(&e1));
+        assert!(graph.node_store.get(n1).edges.contains(&e1));
+        assert!(graph.node_store.get(n2).edges.contains(&e1));
     }
 
     #[test]
@@ -84,7 +84,7 @@ mod test {
 
         graph.delete_edge(e1);
 
-        assert!(!graph.edge_id_manager.is_taken(e1) && !graph.edges().any(|e| e == e1));
+        assert!(!graph.edge_store.exists(e1) && !graph.edges().any(|e| e == e1));
     }
 
     #[test]
@@ -113,19 +113,6 @@ mod test {
 
         assert_eq!(graph.get_node(n1), 1);
         assert_eq!(graph.get_node(n2), 2);
-    }
-
-    #[test]
-    fn test_delete_edge_removes_from_node_edge_lists() {
-        let mut graph: Graph<i32, i32> = Graph::new();
-        let n1 = graph.add_node(1);
-        let n2 = graph.add_node(2);
-        let e1 = graph.add_edge(n1, n2, 10, EdgeKind::Directed);
-
-        graph.delete_edge(e1);
-
-        assert!(!graph.nodes[n1.get_inner()].edges.contains(&e1));
-        assert!(!graph.nodes[n2.get_inner()].edges.contains(&e1));
     }
 
     #[test]

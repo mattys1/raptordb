@@ -1,5 +1,5 @@
 use derive_more::From;
-use crate::graph::{ID, node::NodeID};
+use crate::graph::{IDIntoUSize, node::NodeID};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum EdgeKind {
@@ -7,24 +7,33 @@ pub enum EdgeKind {
     Undirected
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub(super) struct Edge<T> {
-    pub(super) id: EdgeID,
     pub(super) from: NodeID,
     pub(super) to: NodeID,
     pub(super) kind: EdgeKind,
     pub(super) property: T,
 }
 
+// TODO: move edge and node comparision into the graph itself, so that elements dependant on id can also be compared
 impl<E> PartialEq for Edge<E> where E: PartialEq {
     fn eq(&self, other: &Self) -> bool {
-        self.from == other.from && self.to == other.to && self.kind == other.kind && self.property == other.property
+        self.kind == other.kind && self.property == other.property
     }
 }
 
-#[derive(From, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct EdgeID(usize);
 
-impl ID for EdgeID {
-    fn get_inner(&self) -> usize { self.0 }
+// impl<T> HasID for Edge<T> {
+//     fn get_id(&self) -> EdgeID {
+//         self.id
+//     }
+//
+//     type ID = EdgeID;
+// }
+
+impl IDIntoUSize for EdgeID {
+    fn into_usize(&self) -> usize { self.0 }
+    fn from_usize(id: usize) -> Self { EdgeID(id) }
 }
