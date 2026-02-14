@@ -10,6 +10,7 @@ mod edge;
 mod availability_manager;
 mod store;
 
+use log::warn;
 use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 
 use crate::graph::{edge::Edge, node::Node, store::Store};
@@ -48,6 +49,11 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
     pub fn add_edge(&mut self, from: NodeID, to: NodeID, property: E, kind: EdgeKind,) -> EdgeID {
         debug_assert!(self.node_store.exists(from), "invalid 'from' NodeID: {from:?}");
         debug_assert!(self.node_store.exists(to), "invalid 'to' NodeID: {to:?}");
+        debug_assert!(from != to, "cyclical edges are not supported: from and to are the same NodeID: {from:?}");
+        // debug_assert!(self.get_edges_between(from, to).is_empty(), "parallel edge detected: there is already an edge between {from:?} and {to:?}");
+        if !self.get_edges_between(from, to).is_empty() {
+            warn!("parallel edge detected: there is already an edge between {from:?} and {to:?}");
+        } 
 
         let id = self.edge_store.add(Edge { from, to, kind, property });
 
@@ -71,12 +77,12 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
     }
 
     // TODO: maybe make this unchecked by default to match get_edge and get_node?
-    pub fn get_edge_between(&self, from: NodeID, to: NodeID) -> Option<EdgeID> {
+    pub fn get_edges_between(&self, from: NodeID, to: NodeID) -> Vec<EdgeID> {
         debug_assert!(self.node_store.exists(from), "invalid 'from' NodeID: {from:?}");
         debug_assert!(self.node_store.exists(to), "invalid 'to' NodeID: {to:?}");
 
         self.node_store.get(from).edges.iter()
-            .find_map(|edge_id| {
+            .filter_map(|edge_id| {
                 let edge = self.edge_store.get(*edge_id);
                 match edge.kind {
                     EdgeKind::Directed => {
@@ -94,7 +100,7 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
                         }
                     },
                 }
-            })
+            }).collect()
     }
 
     pub fn delete_node(&mut self, id: NodeID) {
@@ -125,15 +131,11 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
             return;
         }
 
-        let edge = &self.edge_store.get(id);
-
-        debug_assert!(edge.from != edge.to, "NOT IMPLEMENTED: cyclical edge deletion - from edge: {:?}, to edge: {:?}", edge.from, edge.to);
         let to_node = self.node_store.get_mut(self.edge_store.get(id).to);
         to_node.edges.retain(|&e| e != id);
 
         let from_node = self.node_store.get_mut(self.edge_store.get(id).from);
         from_node.edges.retain(|&e| e != id);
-
 
         self.edge_store.remove(id);
     }
@@ -227,13 +229,13 @@ impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash +
                 (nodes, edges)
             },
             || {
-                let nodes = self.node_store.all()
+                let nodes = other.node_store.all()
                     .map(|n| &n.item.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
                     });
-                let edges = self.edge_store.all()
+                let edges = other.edge_store.all()
                     .map(|n| &n.item.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
@@ -297,20 +299,44 @@ impl <N, E> Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + S
         false
     }
 
-    fn are_adjacencies_consistent(&self, other: &Self, other_node: NodeID, self_node: NodeID, node_mappings: &HashMap<NodeID, NodeID>) -> bool {
+    fn are_adjacencies_consistent(
+        &self,
+        other: &Self,
+        other_node: NodeID,
+        self_node: NodeID,
+        node_mappings: &HashMap<NodeID, NodeID>,
+    ) -> bool {
         for (self_prime_node, other_prime_node) in node_mappings {
-            let self_edge = self.get_edge_between(*self_prime_node, self_node);
-            let other_edge = other.get_edge_between(*other_prime_node, other_node);
+            let self_edges = self.get_edges_between(*self_prime_node, self_node);
+            let other_edges = other.get_edges_between(*other_prime_node, other_node);
 
-            if self_edge.is_some() != other_edge.is_some() {
+            if self_edges.len() != other_edges.len() {
                 return false;
             }
 
-            let (Some(self_edge), Some(other_edge)) = (self_edge, other_edge) else { continue };
-            if self.get_edge(self_edge) != other.get_edge(other_edge) {
-                return false;
+            let mut counts = HashMap::new();
+
+            for e in &self_edges {
+                let prop = self.get_edge(*e);
+                *counts.entry(prop).or_insert(0usize) += 1;
             }
-        }
+
+            for e in &other_edges {
+                let prop = other.get_edge(*e);
+                match counts.get_mut(&prop) {
+                    Some(count) => {
+                        *count -= 1;
+                        if *count == 0 {
+                            counts.remove(&prop);
+                        }
+                    }
+                    None => return false,
+                }
+            }
+
+            if !counts.is_empty() {
+                return false;
+            }}
 
         true
     }
