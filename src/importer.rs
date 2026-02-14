@@ -165,10 +165,27 @@ pub fn import_xml(path: &Path) -> Result<Graph<GraphNode, GraphWay>, Box<dyn Err
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Once;
+
+    use log::trace;
+
     use super::*;
 
-    // #[test]
+    static TEST_LOGGER: std::sync::Once = Once::new();
+
+    fn init_test_logger() {
+        TEST_LOGGER.call_once(|| {
+            // ignore "already set" errors
+            let _ = simple_logger::init();
+        });
+    }
+
+    #[test]
     fn check_if_xml_pbf_are_same() {
+        init_test_logger();
+
+        trace!("asdf");
+
         let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
         // let workspace_root = String::from("/home/mattys/skrypty-i-syfy/studia/inzynierka/raptorDB/");
         let xml_path = workspace_root.join("./maps/sacz_mniejszy.osm");

@@ -10,6 +10,7 @@ mod edge;
 mod availability_manager;
 mod store;
 
+use log::trace;
 use log::warn;
 use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 
@@ -209,6 +210,7 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
 impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + Send, E: Debug + Copy + PartialEq + Hash + Eq + Sync + Send {
     fn eq(&self, other: &Self) -> bool {
         if(self.node_store.len()) != other.node_store.len() || self.edge_store.len() != other.edge_store.len() {
+            trace!("graph size mismatch: self has {} nodes and {} edges but other has {} nodes and {} edges", self.node_store.len(), self.edge_store.len(), other.node_store.len(), other.edge_store.len());
             return false;
         }
 
@@ -249,6 +251,15 @@ impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash +
         let (other_nodes_set, other_edges_set) = other_sets;
 
         if self_nodes_set != other_nodes_set || self_edges_set != other_edges_set {
+            #[cfg(debug_assertions)] {
+                let nodes_in_self_not_other = self_nodes_set.iter().filter(|(prop, _)| !other_nodes_set.contains_key(*prop)).collect::<Vec<_>>();
+                let nodes_in_other_not_self = other_nodes_set.iter().filter(|(prop, _)| !self_nodes_set.contains_key(*prop)).collect::<Vec<_>>();
+
+                let edges_in_self_not_other = self_edges_set.iter().filter(|(prop, _)| !other_edges_set.contains_key(*prop)).collect::<Vec<_>>();
+                let edges_in_other_not_self = other_edges_set.iter().filter(|(prop, _)| !self_edges_set.contains_key(*prop)).collect::<Vec<_>>();
+
+                trace!("graph property mismatch detected, node property differences: in self but not in other: {nodes_in_self_not_other:?}, in other but not in self: {nodes_in_other_not_self:?}\n edge property differences: in self but not in other: {edges_in_self_not_other:?}, in other but not in self: {edges_in_other_not_self:?}");
+            }
             return false;
         }
 
@@ -296,6 +307,7 @@ impl <N, E> Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + S
             used.remove(&node);
         }
 
+        trace!("backtracking on node {unmapped:?} failed, current mapping: {node_mappings:?}");
         false
     }
 
@@ -311,6 +323,7 @@ impl <N, E> Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + S
             let other_edges = other.get_edges_between(*other_prime_node, other_node);
 
             if self_edges.len() != other_edges.len() {
+                trace!("adjacency inconsistency detected: number of edges between {:?} and {:?} in self is {} but number of edges between {:?} and {:?} in other is {}", self_prime_node, self_node, self_edges.len(), other_prime_node, other_node, other_edges.len());
                 return false;
             }
 
@@ -335,6 +348,7 @@ impl <N, E> Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + S
             }
 
             if !counts.is_empty() {
+                trace!("adjacency inconsistency detected: edge properties between {:?} and {:?} in self do not match edge properties between {:?} and {:?} in other, remaining counts: {:?}", self_prime_node, self_node, other_prime_node, other_node, counts);
                 return false;
             }}
 
