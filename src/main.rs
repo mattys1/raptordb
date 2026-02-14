@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::importer::{import_pbf, import_xml};
+use crate::{graph::NodeID, importer::{import_pbf, import_xml}};
 
 mod graph;
 mod importer;

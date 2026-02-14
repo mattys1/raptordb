@@ -1,140 +1,362 @@
-use std::fmt::Debug;
-
-use derive_more::{From};
-
-mod id_manager;
-use id_manager::IDManager;
-
 mod tests;
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt::Debug;
+use std::hash::Hash;
 
-pub struct Graph<V: Copy, E: Copy> {
-    nodes: Vec<Node<V>>,
-    edges: Vec<Edge<E>>, 
+mod node;
+mod edge;
+mod availability_manager;
+mod store;
 
-    node_id_manager: IDManager<NodeID>,
-    edge_id_manager: IDManager<EdgeID>,
+use log::trace;
+use log::warn;
+use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
+
+use crate::graph::{edge::Edge, node::Node, store::Store};
+
+pub use crate::graph::node::NodeID;
+pub use crate::graph::edge::EdgeID;
+pub use crate::graph::edge::EdgeKind;
+
+#[derive(Debug)]
+pub struct Graph<N: Copy, E: Copy> {
+    node_store: Store<Node<N>, NodeID>,
+    edge_store: Store<Edge<E>, EdgeID>, 
 }
 
-impl<T: Copy, E: Copy> Graph<T, E> {
+impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
     pub fn new() -> Self {
         Self {
-            nodes: Vec::new(),
-            edges: Vec::new(),
-
-            node_id_manager: IDManager::new(),
-            edge_id_manager: IDManager::new(),
+            node_store: Store::new(),
+            edge_store: Store::new(),
         }
     }
 
-    pub fn add_node(&mut self, property: T) -> NodeID {
-        let id = self.node_id_manager.get_available();
-        self.nodes.push(Node { id, property, edges: Vec::new() });
-        id
+    pub fn nodes(&self) -> impl Iterator<Item = NodeID> {
+        // self.nodes.iter().filter_map(|n| if self.node_id_manager.is_taken(n.id) { Some(n.id) } else { None })
+        self.node_store.all().map(|n| n.id)
+    }
+
+    pub fn edges(&self) -> impl Iterator<Item = EdgeID> {
+        self.edge_store.all().map(|e| e.id)
+    }
+
+    pub fn add_node(&mut self, property: N) -> NodeID {
+        self.node_store.add(Node {edges: Vec::new(), property})
     }
 
     pub fn add_edge(&mut self, from: NodeID, to: NodeID, property: E, kind: EdgeKind,) -> EdgeID {
-        debug_assert!(self.node_id_manager.is_taken(from), "invalid 'from' NodeID: {from:?}");
-        debug_assert!(self.node_id_manager.is_taken(to), "invalid 'to' NodeID: {to:?}");
+        debug_assert!(self.node_store.exists(from), "invalid 'from' NodeID: {from:?}");
+        debug_assert!(self.node_store.exists(to), "invalid 'to' NodeID: {to:?}");
+        debug_assert!(from != to, "cyclical edges are not supported: from and to are the same NodeID: {from:?}");
+        // debug_assert!(self.get_edges_between(from, to).is_empty(), "parallel edge detected: there is already an edge between {from:?} and {to:?}");
+        if !self.get_edges_between(from, to).is_empty() {
+            warn!("parallel edge detected: there is already an edge between {from:?} and {to:?}");
+        } 
 
-        let id = self.edge_id_manager.get_available();
-        self.edges.push(Edge {
-            id, from, to, kind, property 
-        });
+        let id = self.edge_store.add(Edge { from, to, kind, property });
 
-        self.nodes[from.get_inner()].edges.push(id);
-        self.nodes[to.get_inner()].edges.push(id);
+        let to_node = self.node_store.get_mut(self.edge_store.get(id).to);
+        to_node.edges.push(id);
+
+        let from_node = self.node_store.get_mut(self.edge_store.get(id).from);
+        from_node.edges.push(id);
 
         id
     }
 
-    pub fn get_node(&self, id: NodeID) -> T {
-        debug_assert!(self.node_id_manager.is_taken(id), "invalid NodeID: {id:?}");
-        self.nodes[id.get_inner()].property
+    pub fn get_node(&self, id: NodeID) -> &N {
+        debug_assert!(self.node_store.exists(id), "invalid NodeID: {id:?}");
+        &self.node_store.get(id).property
     }
 
-    pub fn get_edge(&self, id: EdgeID) -> E {
-        debug_assert!(self.edge_id_manager.is_taken(id), "invalid EdgeID: {id:?}");
-        self.edges[id.get_inner()].property
+    pub fn get_edge(&self, id: EdgeID) -> &E {
+        debug_assert!(self.edge_store.exists(id), "invalid EdgeID: {id:?}");
+        &self.edge_store.get(id).property
+    }
+
+    // TODO: maybe make this unchecked by default to match get_edge and get_node?
+    pub fn get_edges_between(&self, from: NodeID, to: NodeID) -> Vec<EdgeID> {
+        debug_assert!(self.node_store.exists(from), "invalid 'from' NodeID: {from:?}");
+        debug_assert!(self.node_store.exists(to), "invalid 'to' NodeID: {to:?}");
+
+        self.node_store.get(from).edges.iter()
+            .filter_map(|edge_id| {
+                let edge = self.edge_store.get(*edge_id);
+                match edge.kind {
+                    EdgeKind::Directed => {
+                        if edge.to == to {
+                            Some(*edge_id)
+                        } else {
+                            None
+                        }
+                    },
+                    EdgeKind::Undirected => {
+                        if (edge.to == to) || (edge.from == to) {
+                            Some(*edge_id)
+                        } else {
+                            None
+                        }
+                    },
+                }
+            }).collect()
     }
 
     pub fn delete_node(&mut self, id: NodeID) {
-        debug_assert!(self.node_id_manager.is_taken(id), "invalid NodeID: {id:?}");
-        let edge_ids: Vec<EdgeID> = self.nodes[id.get_inner()]
-            .edges.clone();
-        
-        for edge_id in edge_ids { self.delete_edge(edge_id); }
+        debug_assert!(self.node_store.exists(id), "invalid NodeID: {id:?}");
+        self.delete_node_impl(id);
+    }
 
-        self.node_id_manager.mark_as_taken(id);
+    fn delete_node_impl(&mut self, id: NodeID) {
+        if !self.node_store.exists(id) {
+            return;
+        }
+
+        let edge_ids: Vec<EdgeID> = self.node_store.get(id)
+            .edges.clone();
+
+        for edge_id in edge_ids { self.delete_edge_impl(edge_id); }
+
+        self.node_store.remove(id);
     }
 
     pub fn delete_edge(&mut self, id: EdgeID) {
-        debug_assert!(self.edge_id_manager.is_taken(id), "invalid EdgeID: {id:?}");
-        let edge = &self.edges[id.get_inner()];
+        debug_assert!(self.edge_store.exists(id), "invalid EdgeID: {id:?}");
+        self.delete_edge_impl(id);
+    }
 
-        debug_assert!(edge.from != edge.to, "NOT IMPLEMENTED: cyclical edge deletion - from edge: {:?}, to edge: {:?}", edge.from, edge.to);
-        unsafe {
-            let [from_node, to_node] = self.nodes.get_disjoint_unchecked_mut([edge.from.get_inner(), edge.to.get_inner()]);
-
-            from_node.edges.retain(|&e| e != id);
-            to_node.edges.retain(|&e| e != id);
+    fn delete_edge_impl(&mut self, id: EdgeID) {
+        if !self.edge_store.exists(id) {
+            return;
         }
 
-        self.edge_id_manager.mark_as_taken(id);
+        let to_node = self.node_store.get_mut(self.edge_store.get(id).to);
+        to_node.edges.retain(|&e| e != id);
+
+        let from_node = self.node_store.get_mut(self.edge_store.get(id).from);
+        from_node.edges.retain(|&e| e != id);
+
+        self.edge_store.remove(id);
     }
 }
 
-impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq, E: Debug + Copy + PartialEq {
+// impl<N, E> Graph<N, E> where N: Copy + Eq + Hash + PartialEq, E: Copy + PartialEq + Hash + Eq {
+//     pub fn intersection(graph1: &Self, graph2: &Self) -> Self {
+//         // add node in g1 and g2 ->
+//         // for every edge in g1, check:
+//         // is edge in g2? => is `to` in `new_nodes` && is from in `new_nodes` => add_edge
+//         let nodes_set: HashSet<&Node<N>> = graph2.node_store.all().map(|n| &n.item).collect();
+//         let edges_set: HashSet<&Edge<E>> = graph2.edge_store.all().map(|e| &e.item).collect();
+//
+//         let mut result = Self::new();
+//         let common_nodes = graph1.nodes()
+//             .filter_map(|node1| { 
+//                 if nodes_set.contains(graph1.node_store.get(node1)) {
+//                     Some(node1)
+//                 } else {
+//                     None
+//                 }
+//             });
+//
+//         let common_edges = graph1.edges()
+//             .filter_map(|edge1| {
+//                 if edges_set.contains(graph1.edge_store.get(edge1)) {
+//                     Some(edge1)    
+//                 } else {
+//                     None
+//                 }
+//             });
+//         //
+//         // let new_edges: Vec<&Edge<E>> = graph1.edge_store.par_iter()
+//         //     .filter_map(|edge1| {
+//         //         if graph2.edge_store.par_iter().any(|edge2| {
+//         //             edge1 == edge2
+//         //         }) &&
+//         //         (new_nodes.par_iter().any(|nn| edge1.from == *nn) &&
+//         //         new_nodes.par_iter().any(|nn| edge1.to == *nn)) {
+//         //             Some(edge1)
+//         //         } else {
+//         //             None
+//         //         }
+//         //     }).collect();
+//         //
+//         // let mut result_ids = Vec::new();
+//         // #[cfg(debug_assertions)] {
+//         //     result_ids.reserve(new_nodes.len());
+//         // }
+//         //
+//         // for nn in new_nodes {
+//         //     let id = result.add_node(graph1.get_node(nn));
+//         //
+//         //     #[cfg(debug_assertions)] {
+//         //         result_ids.push(id);
+//         //     }
+//         // }
+//         //
+//         // debug_assert_eq!(result_ids, result.node_store.iter().map(|n| n.id).collect::<Vec<NodeID>>(), "Mismatched graph1 node ids and result node ids, id computing logic should be deterministic and the ids should be ordered the same way");
+//         //
+//         // for ne in new_edges {
+//         //     result.add_edge(ne.from, ne.to, ne.property, ne.kind);
+//         // }
+//         //
+//         // result
+//     }
+// }
+
+
+// slow, but should work for testing
+impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + Send, E: Debug + Copy + PartialEq + Hash + Eq + Sync + Send {
     fn eq(&self, other: &Self) -> bool {
-        self.nodes == other.nodes && self.edges == other.edges
+        if(self.node_store.len()) != other.node_store.len() || self.edge_store.len() != other.edge_store.len() {
+            trace!("graph size mismatch: self has {} nodes and {} edges but other has {} nodes and {} edges", self.node_store.len(), self.edge_store.len(), other.node_store.len(), other.edge_store.len());
+            return false;
+        }
+
+        let (self_sets, other_sets) = rayon::join(
+            || {
+                let nodes = self.node_store.all()
+                    .map(|n| &n.item.property)
+                    .fold(HashMap::new(), |mut acc, prop| {
+                        *acc.entry(prop).or_insert(0) += 1;
+                        acc
+                    });
+                let edges = self.edge_store.all()
+                    .map(|n| &n.item.property)
+                    .fold(HashMap::new(), |mut acc, prop| {
+                        *acc.entry(prop).or_insert(0) += 1;
+                        acc
+                    });
+                (nodes, edges)
+            },
+            || {
+                let nodes = other.node_store.all()
+                    .map(|n| &n.item.property)
+                    .fold(HashMap::new(), |mut acc, prop| {
+                        *acc.entry(prop).or_insert(0) += 1;
+                        acc
+                    });
+                let edges = other.edge_store.all()
+                    .map(|n| &n.item.property)
+                    .fold(HashMap::new(), |mut acc, prop| {
+                        *acc.entry(prop).or_insert(0) += 1;
+                        acc
+                    });
+                (nodes, edges)
+            },
+        );
+
+        let (self_nodes_set, self_edges_set) = self_sets;
+        let (other_nodes_set, other_edges_set) = other_sets;
+
+        if self_nodes_set != other_nodes_set || self_edges_set != other_edges_set {
+            #[cfg(debug_assertions)] {
+                let nodes_in_self_not_other = self_nodes_set.iter().filter(|(prop, _)| !other_nodes_set.contains_key(*prop)).collect::<Vec<_>>();
+                let nodes_in_other_not_self = other_nodes_set.iter().filter(|(prop, _)| !self_nodes_set.contains_key(*prop)).collect::<Vec<_>>();
+
+                let edges_in_self_not_other = self_edges_set.iter().filter(|(prop, _)| !other_edges_set.contains_key(*prop)).collect::<Vec<_>>();
+                let edges_in_other_not_self = other_edges_set.iter().filter(|(prop, _)| !self_edges_set.contains_key(*prop)).collect::<Vec<_>>();
+
+                trace!("graph property mismatch detected, node property differences: in self but not in other: {nodes_in_self_not_other:?}, in other but not in self: {nodes_in_other_not_self:?}\n edge property differences: in self but not in other: {edges_in_self_not_other:?}, in other but not in self: {edges_in_other_not_self:?}");
+            }
+            return false;
+        }
+
+        let mut node_mappings = HashMap::<NodeID, NodeID>::new();
+        let mut used = HashSet::<NodeID>::new();
+
+        self.backtrack(other, &mut node_mappings, &mut used)
     }
 }
 
-impl<N: Debug + Copy, E: Debug + Copy> Debug for Graph<N, E> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Graph")
-            .field("nodes", &self.nodes)
-            .field("edges", &self.edges)
-            .finish()
+impl <N, E> Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + Send, E: Debug + Copy + PartialEq + Hash + Eq + Sync + Send {
+    fn backtrack(
+        &self,
+        other: &Self,
+        node_mappings: &mut HashMap<NodeID, NodeID>,
+        used: &mut HashSet<NodeID>,
+    ) -> bool {
+        if node_mappings.len() == self.node_store.len() {
+            return true;
+        }
+
+        let unmapped = self.nodes().find(|node| !node_mappings.contains_key(node)).expect("there should be an unmapped node since we haven't mapped all nodes yet");
+
+        for node in other.nodes() {
+            if used.contains(&node) {
+                continue;
+            }
+
+            if self.get_node(unmapped) != other.get_node(node) {
+                continue;
+            }
+
+            if !self.are_adjacencies_consistent(other, node, unmapped, node_mappings) {
+                continue;
+            }
+
+            node_mappings.insert(unmapped, node);
+            used.insert(node);
+
+            if self.backtrack(other, node_mappings, used) {
+                return true;
+            }
+
+            node_mappings.remove(&unmapped);
+            used.remove(&node);
+        }
+
+        trace!("backtracking on node {unmapped:?} failed, current mapping: {node_mappings:?}");
+        false
+    }
+
+    fn are_adjacencies_consistent(
+        &self,
+        other: &Self,
+        other_node: NodeID,
+        self_node: NodeID,
+        node_mappings: &HashMap<NodeID, NodeID>,
+    ) -> bool {
+        for (self_prime_node, other_prime_node) in node_mappings {
+            let self_edges = self.get_edges_between(*self_prime_node, self_node);
+            let other_edges = other.get_edges_between(*other_prime_node, other_node);
+
+            if self_edges.len() != other_edges.len() {
+                trace!("adjacency inconsistency detected: number of edges between {:?} and {:?} in self is {} but number of edges between {:?} and {:?} in other is {}", self_prime_node, self_node, self_edges.len(), other_prime_node, other_node, other_edges.len());
+                return false;
+            }
+
+            let mut counts = HashMap::new();
+
+            for e in &self_edges {
+                let prop = self.get_edge(*e);
+                *counts.entry(prop).or_insert(0usize) += 1;
+            }
+
+            for e in &other_edges {
+                let prop = other.get_edge(*e);
+                match counts.get_mut(&prop) {
+                    Some(count) => {
+                        *count -= 1;
+                        if *count == 0 {
+                            counts.remove(&prop);
+                        }
+                    }
+                    None => return false,
+                }
+            }
+
+            if !counts.is_empty() {
+                trace!("adjacency inconsistency detected: edge properties between {:?} and {:?} in self do not match edge properties between {:?} and {:?} in other, remaining counts: {:?}", self_prime_node, self_node, other_prime_node, other_node, counts);
+                return false;
+            }}
+
+        true
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum EdgeKind {
-    Directed,
-    Undirected
-}
-
-#[derive(Debug, PartialEq)]
-struct Node<T> {
-    id: NodeID,
-    edges: Vec<EdgeID>,
-    property: T,
-}
-
-#[derive(Debug, PartialEq)]
-struct Edge<T> {
-    id: EdgeID,
-    from: NodeID,
-    to: NodeID,
-    kind: EdgeKind,
-    property: T,
-}
-
-#[derive(From, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct NodeID(usize);
-
-#[derive(From, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct EdgeID(usize);
-
-pub(super) trait ID {
-    fn get_inner(&self) -> usize;
-}
-
-impl ID for NodeID {
-    fn get_inner(&self) -> usize { self.0 }
-}            
-             
-impl ID for EdgeID {
-    fn get_inner(&self) -> usize { self.0 }
+trait IDIntoUSize {
+    fn as_usize(&self) -> usize;
+    fn from_usize(id: usize) -> Self;
 }
