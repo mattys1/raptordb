@@ -1,7 +1,7 @@
 use crate::graph::EdgeID;
 use crate::graph::IDIntoUSize;
 
-#[derive(Debug)]
+#[derive(Debug, Eq)]
 pub struct Node<T> {
     // pub(super) id: NodeID,
     pub(super) edges: Vec<EdgeID>,
@@ -17,20 +17,8 @@ impl<T> PartialEq for Node<T> where T: PartialEq {
     } 
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub struct NodeID(usize);
-
-// impl<T> HasID for Node<T> {
-//     fn get_id(&self) -> NodeID {
-//         self.id
-//     }
-//
-//     fn set_id(&mut self, id: Self::ID) {
-//         self.id = id;
-//     }
-//
-//     type ID = NodeID;
-// }
 
 impl IDIntoUSize for NodeID {
     fn into_usize(&self) -> usize { self.0 }

@@ -13,7 +13,7 @@ mod test {
         let mut graph: Graph<i32, i32> = Graph::new();
         let node_id = graph.add_node(42);
         let property = graph.get_node(node_id);
-        assert_eq!(property, 42);
+        assert_eq!(*property, 42);
     }
 
     #[test]
@@ -23,9 +23,9 @@ mod test {
         let id2 = graph.add_node(20);
         let id3 = graph.add_node(30);
 
-        assert_eq!(graph.get_node(id1), 10);
-        assert_eq!(graph.get_node(id2), 20);
-        assert_eq!(graph.get_node(id3), 30);
+        assert_eq!(*graph.get_node(id1), 10);
+        assert_eq!(*graph.get_node(id2), 20);
+        assert_eq!(*graph.get_node(id3), 30);
     }
 
     #[test]
@@ -35,7 +35,7 @@ mod test {
         let n2 = graph.add_node("B");
         let edge_id = graph.add_edge(n1, n2, "edge_prop", EdgeKind::Directed);
 
-        assert_eq!(graph.get_edge(edge_id), "edge_prop");
+        assert_eq!(*graph.get_edge(edge_id), "edge_prop");
     }
 
     #[test]
@@ -45,7 +45,7 @@ mod test {
         let n2 = graph.add_node(2);
         let edge_id = graph.add_edge(n1, n2, 100, EdgeKind::Undirected);
 
-        assert_eq!(graph.get_edge(edge_id), 100);
+        assert_eq!(*graph.get_edge(edge_id), 100);
     }
 
     #[test]
@@ -59,9 +59,9 @@ mod test {
         let e2 = graph.add_edge(n2, n3, 2.5, EdgeKind::Directed);
         let e3 = graph.add_edge(n1, n3, 3.5, EdgeKind::Undirected);
 
-        assert_eq!(graph.get_edge(e1), 1.5);
-        assert_eq!(graph.get_edge(e2), 2.5);
-        assert_eq!(graph.get_edge(e3), 3.5);
+        assert_eq!(*graph.get_edge(e1), 1.5);
+        assert_eq!(*graph.get_edge(e2), 2.5);
+        assert_eq!(*graph.get_edge(e3), 3.5);
     }
 
     #[test]
@@ -99,7 +99,7 @@ mod test {
 
         graph.delete_edge(e1);
 
-        assert_eq!(graph.get_edge(e2), 20);
+        assert_eq!(*graph.get_edge(e2), 20);
     }
 
     #[test]
@@ -111,8 +111,8 @@ mod test {
 
         graph.delete_edge(e1);
 
-        assert_eq!(graph.get_node(n1), 1);
-        assert_eq!(graph.get_node(n2), 2);
+        assert_eq!(*graph.get_node(n1), 1);
+        assert_eq!(*graph.get_node(n2), 2);
     }
 
     #[test]
@@ -218,5 +218,24 @@ mod test {
         g2.add_edge(m2, m1, 10, EdgeKind::Directed);
 
         assert_ne!(g1, g2);
+    }
+
+    #[test]
+    fn test_different_graphs_inequality_different_node_order_on_edge_directed_different_construction() {
+        let mut g1: Graph<i32, i32> = Graph::new();
+        let mut g2: Graph<i32, i32> = Graph::new();
+
+        let n1 = g1.add_node(1);
+        let n2 = g1.add_node(2);
+        g1.add_edge(n1, n2, 10, EdgeKind::Directed);
+
+        let m1 = g2.add_node(1);
+        let dummy_node = g2.add_node(10);
+        let m2 = g2.add_node(2);
+
+        g2.delete_node(dummy_node);
+        g2.add_edge(m2, m1, 10, EdgeKind::Directed);
+
+        assert_eq!(g1, g2);
     }
 }
