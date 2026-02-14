@@ -39,6 +39,13 @@ pub struct GraphWay {
     distance: OrderedFloat<f64> //TODO: newtype this probably
 }
 
+
+// TODO: hacky but technically solves floating point precision issues, should base node identity on labelling in the source instead of coordinates
+fn quantize_coord(v: f64) -> f64 {
+    const COORD_QUANT: f64 = 1e7;
+    (v * COORD_QUANT).round() / COORD_QUANT
+}
+
 pub fn import_pbf(path: &Path) -> Result<Graph<GraphNode, GraphWay>, Box<dyn Error>> {
     let reader = ElementReader::from_path(path)?;
     let mut graph = Graph::<GraphNode, GraphWay>::new();
@@ -56,11 +63,15 @@ pub fn import_pbf(path: &Path) -> Result<Graph<GraphNode, GraphWay>, Box<dyn Err
         match element {
             // Element::Node(node) => nodes.push(ImportedNode { lat: node.lat().into(), lon: node.lon().into() }),
             Element::Node(node) => {
-                let graph_id = graph.add_node(GraphNode { lat: OrderedFloat(node.lat()).into(), lon: OrderedFloat(node.lon()).into() });
+                let lat = quantize_coord(node.lat());
+                let lon = quantize_coord(node.lon());
+                let graph_id = graph.add_node(GraphNode { lat: OrderedFloat(lat).into(), lon: OrderedFloat(lon).into() });
                 graph_id_by_import_id.insert(node.id(), graph_id);
             },
             Element::DenseNode(dense_node) => {
-                let graph_id = graph.add_node(GraphNode { lat: OrderedFloat(dense_node.lat()).into(), lon: OrderedFloat(dense_node.lon()).into() });
+                let lat = quantize_coord(dense_node.lat());
+                let lon = quantize_coord(dense_node.lon());
+                let graph_id = graph.add_node(GraphNode { lat: OrderedFloat(lat).into(), lon: OrderedFloat(lon).into() });
                 graph_id_by_import_id.insert(dense_node.id(), graph_id);
             },
             Element::Way(way) => imported_ways.push(ImportedWay { 
@@ -116,7 +127,9 @@ pub fn import_xml(path: &Path) -> Result<Graph<GraphNode, GraphWay>, Box<dyn Err
     // let mut imported_ways = Vec::<ImportedWay>::new();
 
     for node in doc.nodes.values() {
-        let graph_id = graph.add_node(GraphNode { lat: OrderedFloat(node.lat).into(), lon: OrderedFloat(node.lon).into() });
+        let lat = quantize_coord(node.lat);
+        let lon = quantize_coord(node.lon);
+        let graph_id = graph.add_node(GraphNode { lat: OrderedFloat(lat).into(), lon: OrderedFloat(lon).into() });
         graph_id_by_import_id.insert(node.id, graph_id); 
     }
 
