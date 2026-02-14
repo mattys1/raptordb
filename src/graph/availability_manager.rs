@@ -48,21 +48,21 @@ impl<T: IDIntoUSize + Copy> AvailabilityManager<T> {
     // }
 
     pub fn mark_as_available(&mut self, id: T) {
-        assert!(self.ids.len() > id.into_usize(), "tried to mark id bigger than the graph");
+        assert!(self.ids.len() > id.as_usize(), "tried to mark id bigger than the graph");
 
         unsafe {
-            let mut bit = self.ids.get_unchecked_mut(id.into_usize());
+            let mut bit = self.ids.get_unchecked_mut(id.as_usize());
             *bit = AVAILABLE;
         }
     }
 
     pub fn is_taken(&self, id: T) -> bool {
-        assert!(self.ids.len() > id.into_usize(), "tried to check for id bigger than the graph");
+        assert!(self.ids.len() > id.as_usize(), "tried to check for id bigger than the graph");
         // if id.get_inner() >= self.ids.len() {
         //     return AVAILABLE;
         // }
 
-        self.ids[id.into_usize()]
+        self.ids[id.as_usize()]
     }
 
     pub fn taken_count(&self) -> usize {

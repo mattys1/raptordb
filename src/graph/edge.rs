@@ -47,6 +47,6 @@ pub struct EdgeID(usize);
 // }
 
 impl IDIntoUSize for EdgeID {
-    fn into_usize(&self) -> usize { self.0 }
+    fn as_usize(&self) -> usize { self.0 }
     fn from_usize(id: usize) -> Self { EdgeID(id) }
 }

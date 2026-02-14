@@ -70,6 +70,33 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
         &self.edge_store.get(id).property
     }
 
+    // TODO: maybe make this unchecked by default to match get_edge and get_node?
+    pub fn get_edge_between(&self, from: NodeID, to: NodeID) -> Option<EdgeID> {
+        debug_assert!(self.node_store.exists(from), "invalid 'from' NodeID: {from:?}");
+        debug_assert!(self.node_store.exists(to), "invalid 'to' NodeID: {to:?}");
+
+        self.node_store.get(from).edges.iter()
+            .find_map(|edge_id| {
+                let edge = self.edge_store.get(*edge_id);
+                match edge.kind {
+                    EdgeKind::Directed => {
+                        if edge.to == to {
+                            Some(*edge_id)
+                        } else {
+                            None
+                        }
+                    },
+                    EdgeKind::Undirected => {
+                        if (edge.to == to) || (edge.from == to) {
+                            Some(*edge_id)
+                        } else {
+                            None
+                        }
+                    },
+                }
+            })
+    }
+
     pub fn delete_node(&mut self, id: NodeID) {
         debug_assert!(self.node_store.exists(id), "invalid NodeID: {id:?}");
         self.delete_node_impl(id);
@@ -185,13 +212,33 @@ impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash +
 
         let (self_sets, other_sets) = rayon::join(
             || {
-                let nodes = self.node_store.all().map(|n| &n.item.property).collect::<HashSet<_>>();
-                let edges = self.edge_store.all().map(|e| &e.item.property).collect::<HashSet<_>>();
+                let nodes = self.node_store.all()
+                    .map(|n| &n.item.property)
+                    .fold(HashMap::new(), |mut acc, prop| {
+                        *acc.entry(prop).or_insert(0) += 1;
+                        acc
+                    });
+                let edges = self.edge_store.all()
+                    .map(|n| &n.item.property)
+                    .fold(HashMap::new(), |mut acc, prop| {
+                        *acc.entry(prop).or_insert(0) += 1;
+                        acc
+                    });
                 (nodes, edges)
             },
             || {
-                let nodes = other.node_store.all().map(|n| &n.item.property).collect::<HashSet<_>>();
-                let edges = other.edge_store.all().map(|e| &e.item.property).collect::<HashSet<_>>();
+                let nodes = self.node_store.all()
+                    .map(|n| &n.item.property)
+                    .fold(HashMap::new(), |mut acc, prop| {
+                        *acc.entry(prop).or_insert(0) += 1;
+                        acc
+                    });
+                let edges = self.edge_store.all()
+                    .map(|n| &n.item.property)
+                    .fold(HashMap::new(), |mut acc, prop| {
+                        *acc.entry(prop).or_insert(0) += 1;
+                        acc
+                    });
                 (nodes, edges)
             },
         );
@@ -232,7 +279,7 @@ impl <N, E> Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + S
                 continue;
             }
 
-            if !self.are_adjacencies_consistent(other, node, unmapped) {
+            if !self.are_adjacencies_consistent(other, node, unmapped, node_mappings) {
                 continue;
             }
 
@@ -250,29 +297,26 @@ impl <N, E> Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + S
         false
     }
 
-    fn are_adjacencies_consistent(&self, other: &Self, other_node: NodeID, self_node: NodeID) -> bool {
-        let self_edges = &self.node_store.get(self_node).edges;
-        let other_edges = &other.node_store.get(other_node).edges;
+    fn are_adjacencies_consistent(&self, other: &Self, other_node: NodeID, self_node: NodeID, node_mappings: &HashMap<NodeID, NodeID>) -> bool {
+        for (self_prime_node, other_prime_node) in node_mappings {
+            let self_edge = self.get_edge_between(*self_prime_node, self_node);
+            let other_edge = other.get_edge_between(*other_prime_node, other_node);
 
-        if self_edges.len() != other_edges.len() {
-            return false;
+            if self_edge.is_some() != other_edge.is_some() {
+                return false;
+            }
+
+            let (Some(self_edge), Some(other_edge)) = (self_edge, other_edge) else { continue };
+            if self.get_edge(self_edge) != other.get_edge(other_edge) {
+                return false;
+            }
         }
 
-        let self_edges_set = self_edges.iter().map(|edge_id| self.edge_store.get(*edge_id)).collect::<HashSet<&Edge<E>>>();
-        let other_edges_set = other_edges.iter().map(|edge_id| other.edge_store.get(*edge_id)).collect::<HashSet<&Edge<E>>>();
-
-        self_edges_set == other_edges_set
+        true
     }
 }
 
 trait IDIntoUSize {
-    fn into_usize(&self) -> usize;
+    fn as_usize(&self) -> usize;
     fn from_usize(id: usize) -> Self;
 }
-//
-// trait HasID {
-//     type ID: IDIntoUSize + Copy;
-//     fn get_id(&self) -> Self::ID;
-//     fn set_id(&mut self, id: Self::ID);
-// }
-

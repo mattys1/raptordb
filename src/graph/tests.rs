@@ -221,6 +221,25 @@ mod test {
     }
 
     #[test]
+    fn test_different_graphs_equality_edge_undirected_different_node_order_different_construction() {
+        let mut g1: Graph<i32, i32> = Graph::new();
+        let mut g2: Graph<i32, i32> = Graph::new();
+
+        let n1 = g1.add_node(1);
+        let n2 = g1.add_node(2);
+        g1.add_edge(n1, n2, 10, EdgeKind::Undirected);
+
+        let m1 = g2.add_node(1);
+        let dummy_node = g2.add_node(10);
+        let m2 = g2.add_node(2);
+
+        g2.delete_node(dummy_node);
+        g2.add_edge(m2, m1, 10, EdgeKind::Undirected);
+
+        assert_eq!(g1, g2);
+    }
+
+    #[test]
     fn test_different_graphs_inequality_different_node_order_on_edge_directed_different_construction() {
         let mut g1: Graph<i32, i32> = Graph::new();
         let mut g2: Graph<i32, i32> = Graph::new();
@@ -235,6 +254,25 @@ mod test {
 
         g2.delete_node(dummy_node);
         g2.add_edge(m2, m1, 10, EdgeKind::Directed);
+
+        assert_ne!(g1, g2);
+    }
+
+    #[test]
+    fn test_different_graphs_same_node_order_on_edge_directed_different_construction() {
+        let mut g1: Graph<i32, i32> = Graph::new();
+        let mut g2: Graph<i32, i32> = Graph::new();
+
+        let n1 = g1.add_node(1);
+        let n2 = g1.add_node(2);
+        g1.add_edge(n1, n2, 10, EdgeKind::Directed);
+
+        let m1 = g2.add_node(1);
+        let dummy_node = g2.add_node(10);
+        let m2 = g2.add_node(2);
+
+        g2.delete_node(dummy_node);
+        g2.add_edge(m1, m2, 10, EdgeKind::Directed);
 
         assert_eq!(g1, g2);
     }

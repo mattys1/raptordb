@@ -21,6 +21,6 @@ impl<T> PartialEq for Node<T> where T: PartialEq {
 pub struct NodeID(usize);
 
 impl IDIntoUSize for NodeID {
-    fn into_usize(&self) -> usize { self.0 }
+    fn as_usize(&self) -> usize { self.0 }
     fn from_usize(id: usize) -> Self { NodeID(id) }
 }            

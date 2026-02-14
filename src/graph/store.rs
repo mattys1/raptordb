@@ -25,13 +25,13 @@ impl<T, I> Store<T, I> where I: IDIntoUSize + Copy + Debug {
     pub fn get(&self, id: I) -> &T {
         debug_assert!(self.availability.is_taken(id), "Trying to get not existing element, id: {id:?}");
 
-        &self.items[id.into_usize()].item
+        &self.items[id.as_usize()].item
     }
 
     pub fn get_mut(&mut self, id: I) -> &mut T {
         debug_assert!(self.availability.is_taken(id), "Trying to get not existing element mutably, id: {id:?}");
 
-        &mut self.items[id.into_usize()].item
+        &mut self.items[id.as_usize()].item
     }
 
     pub fn add(&mut self, item: T) -> I {
