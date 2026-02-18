@@ -54,14 +54,7 @@ pub fn import_pbf(path: &Path) -> Result<Graph<GraphNode, GraphWay>, Box<dyn Err
     let mut imported_ways = Vec::<ImportedWay>::new();
 
     reader.for_each(|element| {
-        // elements.push(match element {
-        //     Element::Node(node) => node.id(),
-        //     Element::DenseNode(dense_node) => dense_node.id(),
-        //     Element::Way(way) => way.id(),
-        //     Element::Relation(relation) => relation.id(),
-        // });
         match element {
-            // Element::Node(node) => nodes.push(ImportedNode { lat: node.lat().into(), lon: node.lon().into() }),
             Element::Node(node) => {
                 let lat = quantize_coord(node.lat());
                 let lon = quantize_coord(node.lon());
@@ -176,15 +169,22 @@ pub fn import_xml(path: &Path) -> Result<Graph<GraphNode, GraphWay>, Box<dyn Err
     Ok(graph)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(feature = "disable_graph_import_tests")))]
 mod tests {
-    use std::sync::Once;
+    use std::{cell::OnceCell, sync::{Once, OnceLock}};
 
     use log::trace;
 
     use super::*;
 
+    struct TestData {
+        xml_graph: Graph<GraphNode, GraphWay>,
+        pbf_graph: Graph<GraphNode, GraphWay>,
+    }
+
     static TEST_LOGGER: std::sync::Once = Once::new();
+
+    static TEST_DATA: OnceLock<TestData> = OnceLock::new();
 
     fn init_test_logger() {
         TEST_LOGGER.call_once(|| {
@@ -193,30 +193,50 @@ mod tests {
         });
     }
 
-    #[test]
-    fn check_if_xml_pbf_are_same() {
-        init_test_logger();
-
-        trace!("asdf");
-
+    fn load_test_data() {
         let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-        // let workspace_root = String::from("/home/mattys/skrypty-i-syfy/studia/inzynierka/raptorDB/");
         let xml_path = workspace_root.join("./maps/sacz_mniejszy.osm");
         let pbf_path = workspace_root.join("./maps/sacz_mniejszy.osm.pbf");
 
-        let mut graph_from_xml = import_xml(&xml_path).expect("failed to import xml");
-        let mut graph_from_pbf = import_pbf(&pbf_path).expect("failed to import pbf");
+        TEST_DATA.get_or_init(|| TestData {
+            xml_graph: import_xml(&xml_path).expect("failed to import xml"),
+            pbf_graph: import_pbf(&pbf_path).expect("failed to import pbf"),
+        });
+    } 
 
-        // let intersection = Graph::intersection(&graph_from_xml, &graph_from_pbf);
-        //
-        // for e in intersection.nodes() {
-        //     graph_from_pbf.delete_node(e);
-        //     graph_from_xml.delete_node(e);
-        // }
-        //
-        // assert_eq!(graph_from_xml, Graph::new());
-        // assert_eq!(graph_from_pbf, Graph::new());
+    macro_rules! test_with_data {
+        ($test_name:ident, |$xml:ident, $pbf:ident| $body:block) => {
+            #[test]
+            fn $test_name() {
+                init_test_logger();
+                load_test_data();
 
-        assert_eq!(graph_from_pbf, graph_from_xml);
+                let $xml = &TEST_DATA.get().unwrap().xml_graph;
+                let $pbf = &TEST_DATA.get().unwrap().pbf_graph;
+
+                $body
+            }
+        }
     }
+
+    test_with_data!(check_if_xml_pbf_are_same, |xml, pbf| {
+        assert_eq!(xml, pbf);
+    });
+
+    // #[test]
+    // fn check_if_node_refs_correspond_to_node_ids() {
+    //     todo!();
+    // }
+
+    test_with_data!(check_if_node_refs_correspond_to_node_ids, |xml, pbf| {
+        for graph in [xml, pbf] {
+            for id in graph.edges() {
+                let nodes = graph.get_connected_nodes(id);
+
+                assert!(graph.nodes().any(|n| nodes.from == n), "edge {id:?} has a from node id that doesn't correspond to any node in the graph: {nodes:#?}");
+                assert!(graph.get_outgoing_edges(nodes.from).contains(&id), "edge {id:?} has a from node id that doesn't have this edge in its outgoing edges: {nodes:#?}");
+                assert!(graph.get_incoming_edges(nodes.to).contains(&id), "edge {id:?} has a from node id that doesn't have this edge in its outgoing edges: {nodes:#?}");
+            }
+        }
+    });
 }

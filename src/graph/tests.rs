@@ -1,4 +1,4 @@
-#[cfg(all(test, not(feature = "disable_graph_tests")))]
+#[cfg(all(test, not(feature = "disable_graph_unit_tests")))]
 #[cfg(test)]
 mod test {
     use super::*;

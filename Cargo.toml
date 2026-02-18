@@ -15,4 +15,5 @@ simple_logger = "5.1.0"
 
 [features]
 
-disable_graph_tests = []
+disable_graph_unit_tests = []
+disable_graph_import_tests = []

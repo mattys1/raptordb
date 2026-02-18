@@ -77,7 +77,33 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
         &self.edge_store.get(id).property
     }
 
-    // TODO: maybe make this unchecked by default to match get_edge and get_node?
+    pub fn get_connected_nodes(&self, id: EdgeID) -> ConnectedNodes {
+        let edge = self.edge_store.get(id);
+        ConnectedNodes { from: edge.from, to: edge.to }
+    }
+
+    // not sure if this should count undirected edges
+    pub fn get_outgoing_edges(&self, id: NodeID) -> Vec<EdgeID> {
+        debug_assert!(self.node_store.exists(id), "invalid NodeID: {id:?}");
+
+        self.node_store.get(id).edges.iter()
+            .filter(|edge_id| {
+                let edge = self.edge_store.get(**edge_id);
+                edge.from == id || edge.kind == EdgeKind::Undirected
+            }).cloned().collect()
+    }
+
+    // not sure if this should count undirected edges
+    pub fn get_incoming_edges(&self, id: NodeID) -> Vec<EdgeID> {
+        debug_assert!(self.node_store.exists(id), "invalid NodeID: {id:?}");
+
+        self.node_store.get(id).edges.iter()
+            .filter(|edge_id| {
+                let edge = self.edge_store.get(**edge_id);
+                edge.to == id || edge.kind == EdgeKind::Undirected
+            }).cloned().collect()
+    }
+
     pub fn get_edges_between(&self, from: NodeID, to: NodeID) -> Vec<EdgeID> {
         debug_assert!(self.node_store.exists(from), "invalid 'from' NodeID: {from:?}");
         debug_assert!(self.node_store.exists(to), "invalid 'to' NodeID: {to:?}");
@@ -141,70 +167,6 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
         self.edge_store.remove(id);
     }
 }
-
-// impl<N, E> Graph<N, E> where N: Copy + Eq + Hash + PartialEq, E: Copy + PartialEq + Hash + Eq {
-//     pub fn intersection(graph1: &Self, graph2: &Self) -> Self {
-//         // add node in g1 and g2 ->
-//         // for every edge in g1, check:
-//         // is edge in g2? => is `to` in `new_nodes` && is from in `new_nodes` => add_edge
-//         let nodes_set: HashSet<&Node<N>> = graph2.node_store.all().map(|n| &n.item).collect();
-//         let edges_set: HashSet<&Edge<E>> = graph2.edge_store.all().map(|e| &e.item).collect();
-//
-//         let mut result = Self::new();
-//         let common_nodes = graph1.nodes()
-//             .filter_map(|node1| { 
-//                 if nodes_set.contains(graph1.node_store.get(node1)) {
-//                     Some(node1)
-//                 } else {
-//                     None
-//                 }
-//             });
-//
-//         let common_edges = graph1.edges()
-//             .filter_map(|edge1| {
-//                 if edges_set.contains(graph1.edge_store.get(edge1)) {
-//                     Some(edge1)    
-//                 } else {
-//                     None
-//                 }
-//             });
-//         //
-//         // let new_edges: Vec<&Edge<E>> = graph1.edge_store.par_iter()
-//         //     .filter_map(|edge1| {
-//         //         if graph2.edge_store.par_iter().any(|edge2| {
-//         //             edge1 == edge2
-//         //         }) &&
-//         //         (new_nodes.par_iter().any(|nn| edge1.from == *nn) &&
-//         //         new_nodes.par_iter().any(|nn| edge1.to == *nn)) {
-//         //             Some(edge1)
-//         //         } else {
-//         //             None
-//         //         }
-//         //     }).collect();
-//         //
-//         // let mut result_ids = Vec::new();
-//         // #[cfg(debug_assertions)] {
-//         //     result_ids.reserve(new_nodes.len());
-//         // }
-//         //
-//         // for nn in new_nodes {
-//         //     let id = result.add_node(graph1.get_node(nn));
-//         //
-//         //     #[cfg(debug_assertions)] {
-//         //         result_ids.push(id);
-//         //     }
-//         // }
-//         //
-//         // debug_assert_eq!(result_ids, result.node_store.iter().map(|n| n.id).collect::<Vec<NodeID>>(), "Mismatched graph1 node ids and result node ids, id computing logic should be deterministic and the ids should be ordered the same way");
-//         //
-//         // for ne in new_edges {
-//         //     result.add_edge(ne.from, ne.to, ne.property, ne.kind);
-//         // }
-//         //
-//         // result
-//     }
-// }
-
 
 // slow, but should work for testing
 impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + Send, E: Debug + Copy + PartialEq + Hash + Eq + Sync + Send {
@@ -359,4 +321,10 @@ impl <N, E> Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + S
 trait IDIntoUSize {
     fn as_usize(&self) -> usize;
     fn from_usize(id: usize) -> Self;
+}
+
+#[derive(Debug)]
+pub struct ConnectedNodes {
+    pub from: NodeID,
+    pub to: NodeID,
 }
