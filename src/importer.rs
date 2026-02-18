@@ -39,6 +39,26 @@ pub struct GraphWay {
     distance: OrderedFloat<f64> //TODO: newtype this probably
 }
 
+fn haversine_distance(start: &GraphNode, end: &GraphNode) -> f64 {
+    const EARTH_RADIUS_M: f64 = 6371e3;
+
+    let lat1 = start.lat.0.into_inner();
+    let lon1 = start.lon.0.into_inner();
+    let lat2 = end.lat.0.into_inner();
+    let lon2 = end.lon.0.into_inner();
+
+    let lat1_rad = lat1.to_radians();
+    let lat2_rad = lat2.to_radians();
+    let delta_lat = (lat2 - lat1).to_radians();
+    let delta_lon = (lon2 - lon1).to_radians();
+
+    let a = (delta_lat / 2.0).sin() * (delta_lat / 2.0).sin()
+        + lat1_rad.cos() * lat2_rad.cos()
+        * (delta_lon / 2.0).sin() * (delta_lon / 2.0).sin();
+    let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
+
+    EARTH_RADIUS_M * c
+}
 
 // TODO: hacky but technically solves floating point precision issues, should base node identity on labelling in the source instead of coordinates
 fn quantize_coord(v: f64) -> f64 {
@@ -102,7 +122,7 @@ pub fn import_pbf(path: &Path) -> Result<Graph<GraphNode, GraphWay>, Box<dyn Err
                 return;
             };
 
-            graph.add_edge(start_node_graph, end_node_graph, GraphWay { distance: way.for_graph.distance }, kind); // TODO: FIXME: actually compute distance
+            graph.add_edge(start_node_graph, end_node_graph, GraphWay { distance: OrderedFloat(haversine_distance(graph.get_node(start_node_graph), graph.get_node(end_node_graph))) }, kind);
         });
     }
 
@@ -162,7 +182,7 @@ pub fn import_xml(path: &Path) -> Result<Graph<GraphNode, GraphWay>, Box<dyn Err
                 return;
             };
 
-            graph.add_edge(start_node_graph, end_node_graph, GraphWay { distance: OrderedFloat(1.) }, kind); // TODO: FIXME: actually compute distance
+            graph.add_edge(start_node_graph, end_node_graph, GraphWay { distance: OrderedFloat(haversine_distance(graph.get_node(start_node_graph), graph.get_node(end_node_graph))) }, kind);
         });  
     }
 
@@ -217,6 +237,17 @@ mod tests {
                 $body
             }
         }
+    }
+
+
+    #[test]
+    fn test_distance_computation() {
+        let node1 = GraphNode { lat: Lattitude(OrderedFloat(0.0)), lon: Longitude(OrderedFloat(0.0)) };
+        let node2 = GraphNode { lat: Lattitude(OrderedFloat(1.0)), lon: Longitude(OrderedFloat(1.0)) };
+        let dist = haversine_distance(&node1, &node2);
+
+        let expected = 157_249.381_271_943_97; 
+        assert!((dist - expected).abs() < 1.0, "Expected {expected}, got {dist}");
     }
 
     test_with_data!(check_if_xml_pbf_are_same, |xml, pbf| {
