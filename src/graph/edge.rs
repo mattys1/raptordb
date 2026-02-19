@@ -1,6 +1,6 @@
 use std::hash::Hash;
 
-use derive_more::{Eq, From};
+use derive_more::{Display, Eq, From};
 use serde_json::Number;
 use crate::graph::{IDIntoUSize, node::NodeID};
 
@@ -36,7 +36,7 @@ impl<E> Hash for Edge<E> where E: Hash {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Display)]
 pub struct EdgeID(usize);
 
 // impl<T> HasID for Edge<T> {

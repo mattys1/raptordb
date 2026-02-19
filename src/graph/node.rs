@@ -1,3 +1,4 @@
+use derive_more::Display;
 use serde_json::Number;
 
 use crate::graph::EdgeID;
@@ -19,7 +20,7 @@ impl<T> PartialEq for Node<T> where T: PartialEq {
     } 
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Display)]
 pub struct NodeID(usize);
 
 impl IDIntoUSize for NodeID {
