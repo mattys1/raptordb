@@ -1,0 +1,22 @@
+use std::path::Path;
+
+use crate::{graph::NodeID, importer::{import_pbf, import_xml}};
+
+mod graph;
+mod importer;
+
+fn main() {
+    simple_logger::init().expect("couldnt init logger");
+    // let graph = Graph::<i64, i64>::new();
+    // println!("Graph created: {graph:?}");
+
+    let workspace_root = String::from("/home/mattys/skrypty-i-syfy/studia/inzynierka/raptorDB/");
+    // let binding = workspace_root + "maps/sacz_mniejszy.osm";
+    let binding = workspace_root + "maps/sacz_mniejszy.osm";
+    println!("reading from {binding}");
+
+    let map_path = Path::new(binding.as_str());
+    let graph = import_xml(map_path).expect("fuck");
+    
+    dbg!(graph);
+}

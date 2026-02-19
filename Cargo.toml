@@ -6,5 +6,14 @@ edition = "2024"
 [dependencies]
 bitvec = "1.0.1"
 derive_more = { version = "2.1.1", features = ["full"] }
+log = "0.4.29"
+ordered-float = "5.1.0"
+osm-xml = "0.6.2"
+osmpbf = "0.3.8"
+rayon = "1.11.0"
+simple_logger = "5.1.0"
 
+[features]
 
+disable_graph_unit_tests = []
+disable_graph_import_tests = []
