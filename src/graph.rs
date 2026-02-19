@@ -12,8 +12,8 @@ mod store;
 
 use log::trace;
 use log::warn;
-use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 
+use crate::graph::store::Entry;
 use crate::graph::{edge::Edge, node::Node, store::Store};
 
 pub use crate::graph::node::NodeID;
@@ -37,12 +37,12 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
     //TODO: use a custom iterator with .count() using .len from Store
     pub fn nodes(&self) -> impl Iterator<Item = NodeID> {
         // self.nodes.iter().filter_map(|n| if self.node_id_manager.is_taken(n.id) { Some(n.id) } else { None })
-        self.node_store.all().map(|n| n.id)
+        StoreIterable::new(&self.node_store)
     }
 
     //TODO: use a custom iterator with .count() using .len from Store
     pub fn edges(&self) -> impl Iterator<Item = EdgeID> {
-        self.edge_store.all().map(|e| e.id)
+        StoreIterable::new(&self.edge_store)
     }
 
     pub fn add_node(&mut self, property: N) -> NodeID {
@@ -329,4 +329,34 @@ trait IDIntoUSize {
 pub struct ConnectedNodes {
     pub from: NodeID,
     pub to: NodeID,
+}
+
+
+//TODO: make this statically polymorphic
+struct StoreIterable<'a, T, I> {
+    store: &'a Store<T, I>,
+    inner: Box<dyn Iterator<Item = &'a Entry<T, I>> + 'a>,
+    // inner: It,
+}
+
+impl<'a, T, I> StoreIterable<'a, T, I> where 
+    I: IDIntoUSize + Copy + Debug {
+    pub fn new(store: &'a Store<T, I>) -> Self {
+        // let inner = Box::new(graph.node_store.all().map(|entry| entry.id));
+        let inner = store.all();
+        Self { store, inner: Box::new(inner) }
+    }
+}
+
+impl<T, I> Iterator for StoreIterable<'_, T, I> where
+    I: IDIntoUSize + Copy + Debug {
+    type Item = I;
+
+    fn next(&mut self) -> Option<I> {
+        self.inner.next().map(|e| e.id)
+    }
+
+    fn count(self) -> usize {
+        self.store.len()
+    }
 }

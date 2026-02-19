@@ -11,7 +11,7 @@ pub enum EdgeKind {
 }
 
 #[derive(Debug, Clone, Copy, std::cmp::Eq)]
-pub(super) struct Edge<T> {
+pub(in crate) struct Edge<T> {
     pub(super) from: NodeID,
     pub(super) to: NodeID,
     pub(super) kind: EdgeKind,

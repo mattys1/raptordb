@@ -5,7 +5,7 @@ use crate::graph::EdgeID;
 use crate::graph::IDIntoUSize;
 
 #[derive(Debug, Eq)]
-pub struct Node<T> {
+pub(in crate) struct Node<T> {
     // pub(super) id: NodeID,
     pub(super) edges: Vec<EdgeID>,
     pub(super) property: T,
