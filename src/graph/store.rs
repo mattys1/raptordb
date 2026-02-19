@@ -19,7 +19,7 @@ impl<T, I> Store<T, I> where I: IDIntoUSize + Copy + Debug {
     }
 
     pub fn all(&self) -> impl Iterator<Item = &Entry<T, I>> {
-        self.items.iter().filter_map(|en| if self.availability.is_taken(en.id) { Some(en) } else { None })
+        self.items.iter().filter(|en| self.availability.is_taken(en.id))
     }
 
     pub fn get(&self, id: I) -> &T {

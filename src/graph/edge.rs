@@ -1,6 +1,7 @@
 use std::hash::Hash;
 
 use derive_more::{Eq, From};
+use serde_json::Number;
 use crate::graph::{IDIntoUSize, node::NodeID};
 
 #[derive(Debug, PartialEq, Clone, Copy, Hash, Eq)]
@@ -49,4 +50,11 @@ pub struct EdgeID(usize);
 impl IDIntoUSize for EdgeID {
     fn as_usize(&self) -> usize { self.0 }
     fn from_usize(id: usize) -> Self { EdgeID(id) }
+}
+
+
+impl From<EdgeID> for geojson::feature::Id {
+    fn from(value: EdgeID) -> Self {
+        geojson::feature::Id::Number(Number::from(value.0))
+    }
 }

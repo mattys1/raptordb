@@ -10,9 +10,21 @@ use osmpbf::{Element, ElementReader};
 use crate::graph::{EdgeKind, Graph, NodeID};
 
 #[derive(Clone, Copy, From, Debug, PartialEq, Hash, Eq)]
-struct Lattitude(OrderedFloat<f64>);
+pub struct Lattitude(OrderedFloat<f64>);
+impl From<Lattitude> for f64 {
+    fn from(value: Lattitude) -> Self {
+        value.0.into()
+    }
+}
+
 #[derive(Clone, Copy, From, Debug, PartialEq, Hash, Eq)]
-struct Longitude(OrderedFloat<f64>);
+pub struct Longitude(OrderedFloat<f64>);
+
+impl From<Longitude> for f64 {
+    fn from(value: Longitude) -> Self {
+        value.0.into()
+    }
+}
 
 #[derive(Copy, Debug, Clone)]
 struct ImportedNode {
@@ -23,8 +35,8 @@ struct ImportedNode {
 
 #[derive(Copy, Debug, Clone, PartialEq, Hash, Eq)]
 pub struct GraphNode {
-    lat: Lattitude,
-    lon: Longitude,
+    pub lat: Lattitude,
+    pub lon: Longitude,
 }
 
 #[derive(Debug, Clone)]

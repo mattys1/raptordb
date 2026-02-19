@@ -34,11 +34,13 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
         }
     }
 
+    //TODO: use a custom iterator with .count() using .len from Store
     pub fn nodes(&self) -> impl Iterator<Item = NodeID> {
         // self.nodes.iter().filter_map(|n| if self.node_id_manager.is_taken(n.id) { Some(n.id) } else { None })
         self.node_store.all().map(|n| n.id)
     }
 
+    //TODO: use a custom iterator with .count() using .len from Store
     pub fn edges(&self) -> impl Iterator<Item = EdgeID> {
         self.edge_store.all().map(|e| e.id)
     }
@@ -101,7 +103,7 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
             .filter(|edge_id| {
                 let edge = self.edge_store.get(**edge_id);
                 edge.to == id || edge.kind == EdgeKind::Undirected
-            }).cloned().collect()
+            }).copied().collect()
     }
 
     pub fn get_edges_between(&self, from: NodeID, to: NodeID) -> Vec<EdgeID> {
@@ -310,7 +312,7 @@ impl <N, E> Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + S
             }
 
             if !counts.is_empty() {
-                trace!("adjacency inconsistency detected: edge properties between {:?} and {:?} in self do not match edge properties between {:?} and {:?} in other, remaining counts: {:?}", self_prime_node, self_node, other_prime_node, other_node, counts);
+                trace!("adjacency inconsistency detected: edge properties between {self_prime_node:?} and {self_node:?} in self do not match edge properties between {other_prime_node:?} and {other_node:?} in other, remaining counts: {counts:?}");
                 return false;
             }}
 
