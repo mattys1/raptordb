@@ -1,3 +1,6 @@
+use derive_more::Display;
+use serde_json::Number;
+
 use crate::graph::EdgeID;
 use crate::graph::IDIntoUSize;
 
@@ -17,10 +20,16 @@ impl<T> PartialEq for Node<T> where T: PartialEq {
     } 
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Display)]
 pub struct NodeID(usize);
 
 impl IDIntoUSize for NodeID {
     fn as_usize(&self) -> usize { self.0 }
     fn from_usize(id: usize) -> Self { NodeID(id) }
 }            
+
+impl From<NodeID> for geojson::feature::Id {
+    fn from(value: NodeID) -> Self {
+        geojson::feature::Id::Number(Number::from(value.0))
+    }
+}
