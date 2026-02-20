@@ -1,6 +1,8 @@
+mod availability_manager;
+
 use std::fmt::Debug;
 
-use crate::database::graph::{IDIntoUSize, availability_manager::AvailabilityManager};
+use crate::database::{graph::IDIntoUSize, store::availability_manager::AvailabilityManager};
 
 pub(super) struct Store<T, I> {
     items: Vec<T>,

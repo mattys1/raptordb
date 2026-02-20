@@ -1,4 +1,6 @@
 mod graph;
+mod property;
+mod store;
 pub(crate) mod importer;
 pub(crate) mod exporter;
 
@@ -19,7 +21,7 @@ impl Database {
     }
 
     //TODO: once actual db operations are implemented, revisit this so that it doesnt use the graph directly
-    pub fn import_graph(&mut self, path: &Path, format: ImportFormat) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn import_graph(&mut self, path: &Path, format: &ImportFormat) -> Result<(), Box<dyn std::error::Error>> {
         match format {
             ImportFormat::OSM => self.graph = import_xml(path)?,
             ImportFormat::PBF => self.graph = import_pbf(path)?,

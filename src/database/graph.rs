@@ -7,22 +7,24 @@ use std::hash::Hash;
 
 mod node;
 mod edge;
-mod availability_manager;
-mod store;
+mod id;
 
 use log::trace;
 use log::warn;
 
-use crate::database::graph::{edge::Edge, node::Node, store::Store};
+use crate::database::graph::id::EdgeID;
+pub(in crate::database) use crate::database::graph::id::IDIntoUSize;
+use crate::database::graph::{edge::Edge, node::Node};
 
-pub use crate::database::graph::node::NodeID;
-pub use crate::database::graph::edge::EdgeID;
 pub use crate::database::graph::edge::EdgeKind;
+
+use crate::database::store::Store;
+use crate::database::graph::id::NodeID;
 
 #[derive(Debug)]
 pub struct Graph<N: Copy, E: Copy> {
-    node_store: Store<Node<N>, NodeID>,
-    edge_store: Store<Edge<E>, EdgeID>, 
+    node_store: Store<Node, NodeID>,
+    edge_store: Store<Edge, EdgeID>, 
 }
 
 impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
@@ -43,7 +45,7 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
     }
 
     pub fn add_node(&mut self, property: N) -> NodeID {
-        self.node_store.add(Node {edges: Vec::new(), property})
+        self.node_store.add(Node {edges: Vec::new(), property_id: property})
     }
 
     pub fn add_edge(&mut self, from: NodeID, to: NodeID, property: E, kind: EdgeKind,) -> EdgeID {
@@ -68,7 +70,7 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
 
     pub fn get_node(&self, id: NodeID) -> &N {
         debug_assert!(self.node_store.exists(id), "invalid NodeID: {id:?}");
-        &self.node_store.get(id).property
+        &self.node_store.get(id).property_id
     }
 
     pub fn get_edge(&self, id: EdgeID) -> &E {
@@ -178,7 +180,7 @@ impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash +
         let (self_sets, other_sets) = rayon::join(
             || {
                 let nodes = self.node_store.all()
-                    .map(|(_, n)| &n.property)
+                    .map(|(_, n)| &n.property_id)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
@@ -193,7 +195,7 @@ impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash +
             },
             || {
                 let nodes = other.node_store.all()
-                    .map(|(_, n)| &n.property)
+                    .map(|(_, n)| &n.property_id)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
@@ -315,11 +317,6 @@ impl <N, E> Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + S
 
         true
     }
-}
-
-trait IDIntoUSize {
-    fn as_usize(&self) -> usize;
-    fn from_usize(id: usize) -> Self;
 }
 
 #[derive(Debug)]

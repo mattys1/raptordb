@@ -1,34 +1,26 @@
-use derive_more::Display;
 use serde_json::Number;
 
-use crate::database::graph::{EdgeID, IDIntoUSize};
+use crate::database::graph::{NodeID, id::{EdgeID, NodePropertyID, NodePropertyTypeID}};
 
 #[derive(Debug, Eq)]
-pub(in crate) struct Node<T> {
+pub(in crate) struct Node {
     // pub(super) id: NodeID,
     pub(super) edges: Vec<EdgeID>,
-    pub(super) property: T,
+    pub(super) property_id: NodePropertyID,
+    pub(super) property_type_id: NodePropertyTypeID
 }
 
 
 // TODO: move edge and node comparision into the graph itself, so that elements dependant on id can also be compared
 // FIXME: this especially affects `Node`
-impl<T> PartialEq for Node<T> where T: PartialEq {
+impl PartialEq for Node where {
     fn eq(&self, other: &Self) -> bool {
-        self.property == other.property && self.edges.len() == other.edges.len()
+        self.property_id == other.property_id && self.edges.len() == other.edges.len()
     } 
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Display)]
-pub struct NodeID(usize);
-
-impl IDIntoUSize for NodeID {
-    fn as_usize(&self) -> usize { self.0 }
-    fn from_usize(id: usize) -> Self { NodeID(id) }
-}            
-
 impl From<NodeID> for geojson::feature::Id {
     fn from(value: NodeID) -> Self {
-        geojson::feature::Id::Number(Number::from(value.0))
+        geojson::feature::Id::Number(Number::from(value))
     }
 }
