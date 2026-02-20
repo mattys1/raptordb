@@ -13,7 +13,6 @@ mod store;
 use log::trace;
 use log::warn;
 
-use crate::graph::store::Entry;
 use crate::graph::{edge::Edge, node::Node, store::Store};
 
 pub use crate::graph::node::NodeID;
@@ -34,13 +33,11 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
         }
     }
 
-    //TODO: use a custom iterator with .count() using .len from Store
     pub fn nodes(&self) -> impl Iterator<Item = NodeID> {
         // self.nodes.iter().filter_map(|n| if self.node_id_manager.is_taken(n.id) { Some(n.id) } else { None })
         StoreIterable::new(&self.node_store)
     }
 
-    //TODO: use a custom iterator with .count() using .len from Store
     pub fn edges(&self) -> impl Iterator<Item = EdgeID> {
         StoreIterable::new(&self.edge_store)
     }
@@ -92,7 +89,7 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
             .filter(|edge_id| {
                 let edge = self.edge_store.get(**edge_id);
                 edge.from == id || edge.kind == EdgeKind::Undirected
-            }).cloned().collect()
+            }).copied().collect()
     }
 
     // not sure if this should count undirected edges
@@ -181,13 +178,13 @@ impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash +
         let (self_sets, other_sets) = rayon::join(
             || {
                 let nodes = self.node_store.all()
-                    .map(|n| &n.item.property)
+                    .map(|(_, n)| &n.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
                     });
                 let edges = self.edge_store.all()
-                    .map(|n| &n.item.property)
+                    .map(|(_, e)| &e.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
@@ -196,13 +193,13 @@ impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash +
             },
             || {
                 let nodes = other.node_store.all()
-                    .map(|n| &n.item.property)
+                    .map(|(_, n)| &n.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
                     });
                 let edges = other.edge_store.all()
-                    .map(|n| &n.item.property)
+                    .map(|(_, e)| &e.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
@@ -335,7 +332,7 @@ pub struct ConnectedNodes {
 //TODO: make this statically polymorphic
 struct StoreIterable<'a, T, I> {
     store: &'a Store<T, I>,
-    inner: Box<dyn Iterator<Item = &'a Entry<T, I>> + 'a>,
+    inner: Box<dyn Iterator<Item = (I, &'a T)> + 'a>,
     // inner: It,
 }
 
@@ -353,7 +350,7 @@ impl<T, I> Iterator for StoreIterable<'_, T, I> where
     type Item = I;
 
     fn next(&mut self) -> Option<I> {
-        self.inner.next().map(|e| e.id)
+        self.inner.next().map(|(id, _)| id)
     }
 
     fn count(self) -> usize {

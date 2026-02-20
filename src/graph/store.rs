@@ -2,14 +2,8 @@ use std::fmt::Debug;
 
 use crate::graph::{IDIntoUSize, availability_manager::AvailabilityManager};
 
-#[derive(Debug)]
-pub(super) struct Entry<T, I> {
-    pub(super) id: I,
-    pub(super) item: T,
-}
-
 pub(super) struct Store<T, I> {
-    items: Vec<Entry<T, I>>,
+    items: Vec<T>,
     availability: AvailabilityManager<I>,
 }
 
@@ -18,25 +12,33 @@ impl<T, I> Store<T, I> where I: IDIntoUSize + Copy + Debug {
         Store { items: Vec::new(), availability: AvailabilityManager::new()}
     }
 
-    pub fn all(&self) -> impl Iterator<Item = &Entry<T, I>> {
-        self.items.iter().filter(|en| self.availability.is_taken(en.id))
+    pub fn all(&self) -> impl Iterator<Item = (I, &T)> {
+        self.items.iter()
+            .enumerate()
+            .filter(|(id, _)| self.availability.is_taken(I::from_usize(*id)))
+            .map(|(id, item)| (I::from_usize(id), item))
     }
 
     pub fn get(&self, id: I) -> &T {
         debug_assert!(self.availability.is_taken(id), "Trying to get not existing element, id: {id:?}");
 
-        &self.items[id.as_usize()].item
+        &self.items[id.as_usize()]
     }
 
     pub fn get_mut(&mut self, id: I) -> &mut T {
         debug_assert!(self.availability.is_taken(id), "Trying to get not existing element mutably, id: {id:?}");
 
-        &mut self.items[id.as_usize()].item
+        &mut self.items[id.as_usize()]
     }
 
     pub fn add(&mut self, item: T) -> I {
         let id = self.availability.get_available();
-        self.items.push(Entry { id, item });
+
+        match self.items.get_mut(id.as_usize()) {
+            Some(reference) => { *reference = item; },
+            None => { self.items.push(item); },
+        }
+
         id
     }
 
@@ -64,7 +66,7 @@ impl<T, I> Store<T, I> where I: IDIntoUSize + Copy + Debug {
 impl<T, I> Debug for Store<T, I> where T: Debug, I: IDIntoUSize + Copy + Debug {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Store")
-            .field("items", &self.items.iter().filter(|en| self.availability.is_taken(en.id)).collect::<Vec<_>>())
+            .field("items", &self.all().collect::<Vec<_>>())
             .finish()
     }
     

@@ -29,6 +29,7 @@ impl<T: IDIntoUSize + Copy> AvailabilityManager<T> {
                     *bit = TAKEN;
                 }
 
+                debug_assert!(!self.is_taken(T::from_usize(idx)), "tried to get unabailable id, idx: {idx}");
                 T::from_usize(idx)
             },
             None => {
@@ -48,7 +49,7 @@ impl<T: IDIntoUSize + Copy> AvailabilityManager<T> {
     // }
 
     pub fn mark_as_available(&mut self, id: T) {
-        assert!(self.ids.len() > id.as_usize(), "tried to mark id bigger than the graph");
+        debug_assert!(self.ids.len() > id.as_usize(), "tried to mark id bigger than the graph");
 
         unsafe {
             let mut bit = self.ids.get_unchecked_mut(id.as_usize());
@@ -57,7 +58,7 @@ impl<T: IDIntoUSize + Copy> AvailabilityManager<T> {
     }
 
     pub fn is_taken(&self, id: T) -> bool {
-        assert!(self.ids.len() > id.as_usize(), "tried to check for id bigger than the graph");
+        debug_assert!(self.ids.len() > id.as_usize(), "tried to check for id bigger than the graph");
         // if id.get_inner() >= self.ids.len() {
         //     return AVAILABLE;
         // }

@@ -1,8 +1,7 @@
 use derive_more::Display;
 use serde_json::Number;
 
-use crate::graph::EdgeID;
-use crate::graph::IDIntoUSize;
+use crate::graph::{EdgeID, IDIntoUSize};
 
 #[derive(Debug, Eq)]
 pub(in crate) struct Node<T> {

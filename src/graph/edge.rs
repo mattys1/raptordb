@@ -32,7 +32,7 @@ impl<E> PartialEq for Edge<E> where E: PartialEq {
 impl<E> Hash for Edge<E> where E: Hash {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.kind.hash(state);
-        self.property.hash(state) 
+        self.property.hash(state);
     }
 }
 
