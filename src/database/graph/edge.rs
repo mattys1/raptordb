@@ -3,7 +3,7 @@ use std::hash::Hash;
 use derive_more::{Display, Eq, From};
 use serde_json::Number;
 
-use crate::database::graph::{NodeID, id::{EdgePropertyID, EdgePropertyTypeID}};
+use crate::database::{graph::{NodeID, id::{EdgePropertyID, EdgePropertyTypeID}}, property::PropertyIdentifier};
 
 #[derive(Debug, PartialEq, Clone, Copy, Hash, Eq)]
 pub enum EdgeKind {
@@ -16,9 +16,10 @@ pub(crate) struct Edge {
     pub(super) from: NodeID,
     pub(super) to: NodeID,
     pub(super) kind: EdgeKind,
-    pub(super) property_id: EdgePropertyID,
-    pub(super) property_type_id: EdgePropertyTypeID,
+    pub(super) property: EdgeProperty
 }
+
+pub(super) type EdgeProperty = PropertyIdentifier<EdgePropertyID, EdgePropertyTypeID>; 
 
 // TODO: move edge and node comparision into the graph itself, so that elements dependant on id can also be compared
 impl PartialEq for Edge where {

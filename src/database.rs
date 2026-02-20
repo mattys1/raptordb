@@ -11,13 +11,13 @@ use graph::Graph;
 use crate::{database::{exporter::export_geojson, importer::{GraphNode, GraphWay, ImportFormat, import_pbf, import_xml}}};
 
 pub struct Database {
-    graph: Graph<GraphNode, GraphWay>
+    graph: Graph
 }
 
 impl Database {
 
     pub fn new() -> Self {
-        Database { graph: Graph::<GraphNode, GraphWay>::new() }
+        Database { graph: Graph::new() }
     }
 
     //TODO: once actual db operations are implemented, revisit this so that it doesnt use the graph directly

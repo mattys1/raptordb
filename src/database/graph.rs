@@ -12,22 +12,29 @@ mod id;
 use log::trace;
 use log::warn;
 
+use crate::database::graph::edge::EdgeProperty;
 use crate::database::graph::id::EdgeID;
+use crate::database::graph::id::EdgePropertyID;
+use crate::database::graph::id::EdgePropertyTypeID;
 pub(in crate::database) use crate::database::graph::id::IDIntoUSize;
+use crate::database::graph::id::NodePropertyID;
+use crate::database::graph::id::NodePropertyTypeID;
+use crate::database::graph::node::NodeProperty;
 use crate::database::graph::{edge::Edge, node::Node};
 
 pub use crate::database::graph::edge::EdgeKind;
 
+use crate::database::property::PropertyIdentifier;
 use crate::database::store::Store;
 use crate::database::graph::id::NodeID;
 
 #[derive(Debug)]
-pub struct Graph<N: Copy, E: Copy> {
+pub struct Graph {
     node_store: Store<Node, NodeID>,
     edge_store: Store<Edge, EdgeID>, 
 }
 
-impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
+impl Graph {
     pub fn new() -> Self {
         Self {
             node_store: Store::new(),
@@ -44,11 +51,11 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
         StoreIterable::new(&self.edge_store)
     }
 
-    pub fn add_node(&mut self, property: N) -> NodeID {
-        self.node_store.add(Node {edges: Vec::new(), property_id: property})
+    pub fn add_node(&mut self, property: NodeProperty) -> NodeID {
+        self.node_store.add(Node { edges: Vec::new(), property })
     }
 
-    pub fn add_edge(&mut self, from: NodeID, to: NodeID, property: E, kind: EdgeKind,) -> EdgeID {
+    pub fn add_edge(&mut self, from: NodeID, to: NodeID, property: EdgeProperty, kind: EdgeKind,) -> EdgeID {
         debug_assert!(self.node_store.exists(from), "invalid 'from' NodeID: {from:?}");
         debug_assert!(self.node_store.exists(to), "invalid 'to' NodeID: {to:?}");
         debug_assert!(from != to, "cyclical edges are not supported: from and to are the same NodeID: {from:?}");
@@ -68,14 +75,14 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
         id
     }
 
-    pub fn get_node(&self, id: NodeID) -> &N {
+    pub fn get_node(&self, id: NodeID) -> NodeProperty {
         debug_assert!(self.node_store.exists(id), "invalid NodeID: {id:?}");
-        &self.node_store.get(id).property_id
+        self.node_store.get(id).property
     }
 
-    pub fn get_edge(&self, id: EdgeID) -> &E {
+    pub fn get_edge(&self, id: EdgeID) -> EdgeProperty {
         debug_assert!(self.edge_store.exists(id), "invalid EdgeID: {id:?}");
-        &self.edge_store.get(id).property
+        self.edge_store.get(id).property
     }
 
     pub fn get_connected_nodes(&self, id: EdgeID) -> ConnectedNodes {
@@ -170,7 +177,7 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
 }
 
 // slow, but should work for testing
-impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + Send, E: Debug + Copy + PartialEq + Hash + Eq + Sync + Send {
+impl PartialEq for Graph {
     fn eq(&self, other: &Self) -> bool {
         if(self.node_store.len()) != other.node_store.len() || self.edge_store.len() != other.edge_store.len() {
             trace!("graph size mismatch: self has {} nodes and {} edges but other has {} nodes and {} edges", self.node_store.len(), self.edge_store.len(), other.node_store.len(), other.edge_store.len());
@@ -180,7 +187,7 @@ impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash +
         let (self_sets, other_sets) = rayon::join(
             || {
                 let nodes = self.node_store.all()
-                    .map(|(_, n)| &n.property_id)
+                    .map(|(_, n)| &n.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
@@ -195,7 +202,7 @@ impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash +
             },
             || {
                 let nodes = other.node_store.all()
-                    .map(|(_, n)| &n.property_id)
+                    .map(|(_, n)| &n.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
@@ -233,7 +240,7 @@ impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash +
     }
 }
 
-impl <N, E> Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + Send, E: Debug + Copy + PartialEq + Hash + Eq + Sync + Send {
+impl Graph {
     fn backtrack(
         &self,
         other: &Self,
