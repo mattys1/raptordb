@@ -7,7 +7,12 @@ use ordered_float::OrderedFloat;
 use osm_xml::OSM;
 use osmpbf::{Element, ElementReader};
 
-use crate::graph::{EdgeKind, Graph, NodeID};
+use super::graph::{EdgeKind, Graph, NodeID};
+
+pub(crate) enum ImportFormat {
+    OSM,
+    PBF
+}
 
 #[derive(Clone, Copy, From, Debug, PartialEq, Hash, Eq)]
 pub struct Lattitude(OrderedFloat<f64>);
@@ -78,7 +83,7 @@ fn quantize_coord(v: f64) -> f64 {
     (v * COORD_QUANT).round() / COORD_QUANT
 }
 
-pub fn import_pbf(path: &Path) -> Result<Graph<GraphNode, GraphWay>, Box<dyn Error>> {
+pub(super) fn import_pbf(path: &Path) -> Result<Graph<GraphNode, GraphWay>, Box<dyn Error>> {
     let reader = ElementReader::from_path(path)?;
     let mut graph = Graph::<GraphNode, GraphWay>::new();
 
@@ -142,7 +147,7 @@ pub fn import_pbf(path: &Path) -> Result<Graph<GraphNode, GraphWay>, Box<dyn Err
 
 }
 
-pub fn import_xml(path: &Path) -> Result<Graph<GraphNode, GraphWay>, Box<dyn Error>> {
+pub(super) fn import_xml(path: &Path) -> Result<Graph<GraphNode, GraphWay>, Box<dyn Error>> {
     let file = File::open(path)?;
     let doc = OSM::parse(file).unwrap();
 

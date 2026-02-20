@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::graph::{IDIntoUSize, availability_manager::AvailabilityManager};
+use crate::database::graph::{IDIntoUSize, availability_manager::AvailabilityManager};
 
 pub(super) struct Store<T, I> {
     items: Vec<T>,

@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use derive_more::{Display, Eq, From};
 use serde_json::Number;
-use crate::graph::{IDIntoUSize, node::NodeID};
+use crate::database::graph::{IDIntoUSize, node::NodeID};
 
 #[derive(Debug, PartialEq, Clone, Copy, Hash, Eq)]
 pub enum EdgeKind {

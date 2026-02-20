@@ -4,9 +4,9 @@ use geojson::{Feature, GeoJson, Geometry, JsonObject, JsonValue};
 use osm_xml::Id;
 use serde_json::Map;
 
-use crate::{graph::Graph, importer::{GraphNode, GraphWay}};
+use crate::database::{graph::Graph, importer::{GraphNode, GraphWay}};
 
-pub fn export_geojson(graph: &Graph<GraphNode, GraphWay>, export_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+pub(super) fn export_geojson(graph: &Graph<GraphNode, GraphWay>, export_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // let json = JsonObject::new();
     let mut features = Vec::with_capacity(graph.nodes().count() + graph.edges().count());
     

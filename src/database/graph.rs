@@ -13,11 +13,11 @@ mod store;
 use log::trace;
 use log::warn;
 
-use crate::graph::{edge::Edge, node::Node, store::Store};
+use crate::database::graph::{edge::Edge, node::Node, store::Store};
 
-pub use crate::graph::node::NodeID;
-pub use crate::graph::edge::EdgeID;
-pub use crate::graph::edge::EdgeKind;
+pub use crate::database::graph::node::NodeID;
+pub use crate::database::graph::edge::EdgeID;
+pub use crate::database::graph::edge::EdgeKind;
 
 #[derive(Debug)]
 pub struct Graph<N: Copy, E: Copy> {

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use bitvec::prelude::*;
-use crate::graph::IDIntoUSize;
+use crate::database::graph::IDIntoUSize;
 
 const TAKEN: bool = true;
 const AVAILABLE: bool = false;

@@ -1,4 +1,6 @@
 /target
+.idea/
+export/
 
 *.bak
 maps/

@@ -2,7 +2,7 @@
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::graph::{EdgeKind, Graph};
+    use crate::database::graph::{EdgeKind, Graph};
 
     #[test]
     fn test_add_multiple_nodes() {

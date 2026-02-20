@@ -1,10 +1,8 @@
 use std::path::Path;
 
-use crate::{exporter::export_geojson, graph::NodeID, importer::{import_pbf, import_xml}};
+use crate::database::{Database, importer::ImportFormat};
 
-mod graph;
-mod importer;
-mod exporter;
+mod database;
 
 fn main() {
     simple_logger::init().expect("couldnt init logger");
@@ -17,7 +15,8 @@ fn main() {
     println!("reading from {binding}");
 
     let map_path = Path::new(binding.as_str());
-    let graph = import_pbf(map_path).expect("fuck");
-    
-    export_geojson(&graph, Path::new((workspace_root + "export/sacz_mniejszy.geojson").as_str())).expect("cant export");
+    let mut database = Database::new();
+
+    database.import_graph(map_path, ImportFormat::PBF).expect("cant import graph");
+    database.export_graph(Path::new((workspace_root + "export/sacz_mniejszy.geojson").as_str())).expect("cant export");
 }
