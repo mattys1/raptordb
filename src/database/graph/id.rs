@@ -32,9 +32,9 @@ macro_rules! new_id {
 // #[display("{}", _0)] pub(super) struct Id<Tag>(usize, PhantomData<Tag>);
 
 new_id!(Node, convert);
-new_id!(NodeProperty);
-new_id!(NodePropertyType);
+new_id!(NodeProperty, convert);
+new_id!(NodePropertyType, convert);
 
 new_id!(Edge, convert);
-new_id!(EdgeProperty);
-new_id!(EdgePropertyType);
+new_id!(EdgeProperty, convert);
+new_id!(EdgePropertyType, convert);

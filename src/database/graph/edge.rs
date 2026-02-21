@@ -3,7 +3,7 @@ use std::hash::Hash;
 use derive_more::{Display, Eq, From};
 use serde_json::Number;
 
-use crate::database::{graph::{NodeID, id::{EdgePropertyID, EdgePropertyTypeID}}, property::PropertyIdentifier};
+use crate::database::{graph::{EdgeID, IDIntoUSize, NodeID, id::{EdgePropertyID, EdgePropertyTypeID}}, property::PropertyIdentifier};
 
 #[derive(Debug, PartialEq, Clone, Copy, Hash, Eq)]
 pub enum EdgeKind {
@@ -41,7 +41,7 @@ impl Hash for Edge where {
 
 impl From<EdgeID> for geojson::feature::Id {
     fn from(value: EdgeID) -> Self {
-        geojson::feature::Id::Number(Number::from(value.0))
+        geojson::feature::Id::Number(Number::from(value.as_usize()))
     }
 }
 
