@@ -7,7 +7,7 @@ use std::hash::Hash;
 
 mod node;
 mod edge;
-mod id;
+pub(in super) mod id;
 
 use log::trace;
 use log::warn;
@@ -16,12 +16,12 @@ use crate::database::graph::edge::EdgeProperty;
 use crate::database::graph::id::EdgeID;
 use crate::database::graph::id::EdgePropertyID;
 use crate::database::graph::id::EdgePropertyTypeID;
-pub(in crate::database) use crate::database::graph::id::IDIntoUSize;
 use crate::database::graph::id::NodePropertyID;
 use crate::database::graph::id::NodePropertyTypeID;
 use crate::database::graph::node::NodeProperty;
 use crate::database::graph::{edge::Edge, node::Node};
 
+pub(in crate::database) use crate::database::graph::id::IDIntoUSize;
 pub use crate::database::graph::edge::EdgeKind;
 
 use crate::database::property::PropertyIdentifier;

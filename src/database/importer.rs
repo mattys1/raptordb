@@ -7,6 +7,8 @@ use ordered_float::OrderedFloat;
 use osm_xml::OSM;
 use osmpbf::{Element, ElementReader};
 
+use crate::database::graph::id::NodeID;
+
 use super::graph::{EdgeKind, Graph};
 
 pub(crate) enum ImportFormat {
@@ -86,7 +88,7 @@ fn quantize_coord(v: f64) -> f64 {
 pub(super) fn import_pbf(path: &Path) -> Result<Graph, Box<dyn Error>> {
     todo!()
     // let reader = ElementReader::from_path(path)?;
-    // let mut graph = Graph::<GraphNode, GraphWay>::new();
+    // let mut graph = Graph::new();
     //
     // let mut graph_id_by_import_id = HashMap::<i64, NodeID>::new();
     // let mut imported_ways = Vec::<ImportedWay>::new();

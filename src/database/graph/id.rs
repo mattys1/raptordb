@@ -10,7 +10,7 @@ macro_rules! new_id {
     ($base:ident) => {
         paste! {
             #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Display)]
-            pub(super) struct [<$base ID>](usize);
+            pub(in crate::database) struct [<$base ID>](usize);
         }
     };
 
@@ -18,7 +18,7 @@ macro_rules! new_id {
         paste! {
 
             #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Display)]
-            pub(super) struct [<$base ID>](usize);
+            pub(in crate::database) struct [<$base ID>](usize);
 
             impl IDIntoUSize for [<$base ID>] {
                 fn as_usize(&self) -> usize { self.0 }
