@@ -4,6 +4,9 @@ use std::fmt::Debug;
 
 use crate::database::{graph::IDIntoUSize, store::availability_manager::AvailabilityManager};
 
+
+// TODO: introduce an ConstantStore struct with a builder that still supports things like pagination and storage just like the normal store, but not deletion and growth
+/// TODO: introduce a ClusteredStore struct for use with SoA, so that you don't need to do Vec<Store> and duplicate [AvailabilityManager]
 pub(super) struct Store<T, I> {
     items: Vec<T>,
     availability: AvailabilityManager<I>,
