@@ -24,7 +24,6 @@ use crate::database::graph::{edge::Edge, node::Node};
 pub(in crate::database) use crate::database::graph::id::IDIntoUSize;
 pub use crate::database::graph::edge::EdgeKind;
 
-use crate::database::property::PropertyIdentifier;
 use crate::database::store::Store;
 use crate::database::graph::id::NodeID;
 

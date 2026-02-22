@@ -3,7 +3,7 @@ use std::hash::Hash;
 use derive_more::{Display, Eq, From};
 use serde_json::Number;
 
-use crate::database::{graph::{EdgeID, IDIntoUSize, NodeID, id::{EdgePropertyID, EdgePropertyTypeID}}, property::PropertyIdentifier};
+use crate::database::{graph::{EdgeID, IDIntoUSize, NodeID, id::{EdgePropertyID, EdgePropertyTypeID}}, property_manager::PropertyIdentifier};
 
 #[derive(Debug, PartialEq, Clone, Copy, Hash, Eq)]
 pub enum EdgeKind {

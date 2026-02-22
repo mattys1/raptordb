@@ -2,16 +2,10 @@ use std::{fmt::{self, Debug}, marker::Copy};
 
 use derive_more::derive;
 
-use crate::database::{graph::IDIntoUSize, store::Store, type_registry::TypeDescriptor};
+use crate::database::{graph::IDIntoUSize, property_manager::type_registry::TypeDescriptor, store::Store};
 
 pub(super) struct PropertyStore<PropertyId, PropertyTypeId> {
     items: Store<Properties<PropertyId>, PropertyTypeId>
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
-pub(super) struct PropertyIdentifier<PropertyID, TypeID> {
-    pub(super) id: PropertyID,
-    pub(super) type_id: TypeID,
 }
 
 impl <PropertyId, PropertyTypeId> PropertyStore<PropertyId, PropertyTypeId> where
@@ -25,7 +19,7 @@ impl <PropertyId, PropertyTypeId> PropertyStore<PropertyId, PropertyTypeId> wher
         self.items.add(Properties::new(type_descriptor))
     }
 
-    pub fn add_property(&mut self, type_id: PropertyTypeId, property: Vec<PropertyFieldContents>) {
+    pub fn add_property(&mut self, type_id: PropertyTypeId, property: &[PropertyFieldContents]) {
         let fields = &mut self.items.get_mut(type_id).fields;
 
         if fields.is_empty() {

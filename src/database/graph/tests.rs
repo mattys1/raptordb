@@ -3,7 +3,7 @@
 mod test { 
     use crate::database::graph::{EdgeKind, Graph, IDIntoUSize};
     use crate::database::graph::id::{NodePropertyID, NodePropertyTypeID, EdgePropertyID, EdgePropertyTypeID};
-    use crate::database::property::PropertyIdentifier;
+    use crate::database::property_manager::PropertyIdentifier;
 
     fn node_prop(id: usize) -> PropertyIdentifier<NodePropertyID, NodePropertyTypeID> {
         PropertyIdentifier { id: NodePropertyID::from_usize(id), type_id: NodePropertyTypeID::from_usize(1) }

@@ -1,6 +1,6 @@
 use serde_json::Number;
 
-use crate::database::{graph::{IDIntoUSize, NodeID, id::{EdgeID, NodePropertyID, NodePropertyTypeID}}, property::PropertyIdentifier};
+use crate::database::{graph::{IDIntoUSize, NodeID, id::{EdgeID, NodePropertyID, NodePropertyTypeID}}, property_manager::PropertyIdentifier};
 
 #[derive(Debug, Eq)]
 pub(in crate) struct Node {
