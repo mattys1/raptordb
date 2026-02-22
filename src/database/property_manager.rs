@@ -17,41 +17,41 @@ impl <PropertyId, PropertyTypeId> PropertyManager<PropertyId, PropertyTypeId> wh
         Self { type_registry: TypeRegistry::new(), property_store: PropertyStore::new() }
     }
 
-    pub fn import_type(&mut self) -> PropertyTypeId {
-        let descriptor = self.type_registry.add_type("test_type".into(), vec![
-            FieldDescriptor {
-                name: "field1".into(),
-                field_type: type_registry::FieldType::Integer,
-                nullable: false,
-            },
-            FieldDescriptor {
-                name: "field2".into(),
-                field_type: type_registry::FieldType::String,
-                nullable: false,
-            }
-        ]);
+    pub fn register_type(&mut self, fields: Vec<FieldDescriptor>) -> PropertyTypeId {
+        let descriptor = self.type_registry.add_type("test_type".into(), fields);
 
         self.property_store.add_type(descriptor)
     }
 
-    pub fn add_node_property(&mut self, id: PropertyTypeId) {
-        self.property_store.add_property(id, &[
-            PropertyFieldContents::Integer(1),
-            PropertyFieldContents::String("test".into()),
-        ]);
+    pub fn add_node_property(&mut self, id: PropertyTypeId, field_contents: &[PropertyFieldContents]) {
+        self.property_store.add_property(id, field_contents);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::database::{NodePropertyID, NodePropertyTypeID, property_manager::PropertyManager};
+    use crate::database::{NodePropertyID, NodePropertyTypeID, property_manager::{FieldDescriptor, PropertyFieldContents, PropertyManager, type_registry::FieldType}};
 
     #[test]
     fn import_type_test() {
         let mut manager = PropertyManager::<NodePropertyID, NodePropertyTypeID>::new();
-        let id = manager.import_type();
+        let id = manager.register_type(vec![
+            FieldDescriptor {
+                name: "field1".into(),
+                field_type: FieldType::Integer,
+                nullable: false,
+            },
+            FieldDescriptor {
+                name: "field2".into(),
+                field_type: FieldType::String,
+                nullable: false,
+            }
+        ]);
 
-        manager.add_node_property(id);
+        manager.add_node_property(id, &[
+            PropertyFieldContents::Integer(1),
+            PropertyFieldContents::String("test".into()),
+        ]);
     }
 }
 
