@@ -7,26 +7,37 @@ use std::hash::Hash;
 
 mod node;
 mod edge;
-mod availability_manager;
-mod store;
+pub(in super) mod id;
 
 use log::trace;
 use log::warn;
 
-use crate::graph::store::Entry;
-use crate::graph::{edge::Edge, node::Node, store::Store};
+use crate::database::graph::edge::EdgeData;
+use crate::database::graph::edge::EdgeProperty;
+use crate::database::graph::id::EdgeID;
+use crate::database::graph::id::EdgePropertyID;
+use crate::database::graph::id::EdgePropertyTypeID;
+use crate::database::graph::id::NodePropertyID;
+use crate::database::graph::id::NodePropertyTypeID;
+use crate::database::graph::node::NodeData;
+use crate::database::graph::node::NodeProperty;
+use crate::database::graph::{edge::Edge, node::Node};
 
-pub use crate::graph::node::NodeID;
-pub use crate::graph::edge::EdgeID;
-pub use crate::graph::edge::EdgeKind;
+pub(in crate::database) use crate::database::graph::id::IDIntoUSize;
+pub use crate::database::graph::edge::EdgeKind;
+
+use crate::database::importer::Lattitude;
+use crate::database::importer::Longitude;
+use crate::database::store::Store;
+use crate::database::graph::id::NodeID;
 
 #[derive(Debug)]
-pub struct Graph<N: Copy, E: Copy> {
-    node_store: Store<Node<N>, NodeID>,
-    edge_store: Store<Edge<E>, EdgeID>, 
+pub struct Graph {
+    node_store: Store<Node, NodeID>,
+    edge_store: Store<Edge, EdgeID>, 
 }
 
-impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
+impl Graph {
     pub fn new() -> Self {
         Self {
             node_store: Store::new(),
@@ -34,22 +45,20 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
         }
     }
 
-    //TODO: use a custom iterator with .count() using .len from Store
     pub fn nodes(&self) -> impl Iterator<Item = NodeID> {
         // self.nodes.iter().filter_map(|n| if self.node_id_manager.is_taken(n.id) { Some(n.id) } else { None })
         StoreIterable::new(&self.node_store)
     }
 
-    //TODO: use a custom iterator with .count() using .len from Store
     pub fn edges(&self) -> impl Iterator<Item = EdgeID> {
         StoreIterable::new(&self.edge_store)
     }
 
-    pub fn add_node(&mut self, property: N) -> NodeID {
-        self.node_store.add(Node {edges: Vec::new(), property})
+    pub fn add_node(&mut self, data: NodeData) -> NodeID {
+        self.node_store.add(Node { edges: Vec::new(), data })
     }
 
-    pub fn add_edge(&mut self, from: NodeID, to: NodeID, property: E, kind: EdgeKind,) -> EdgeID {
+    pub fn add_edge(&mut self, from: NodeID, to: NodeID, data: EdgeData) -> EdgeID {
         debug_assert!(self.node_store.exists(from), "invalid 'from' NodeID: {from:?}");
         debug_assert!(self.node_store.exists(to), "invalid 'to' NodeID: {to:?}");
         debug_assert!(from != to, "cyclical edges are not supported: from and to are the same NodeID: {from:?}");
@@ -58,7 +67,7 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
             warn!("parallel edge detected: there is already an edge between {from:?} and {to:?}");
         } 
 
-        let id = self.edge_store.add(Edge { from, to, kind, property });
+        let id = self.edge_store.add(Edge { from, to, data});
 
         let to_node = self.node_store.get_mut(self.edge_store.get(id).to);
         to_node.edges.push(id);
@@ -69,14 +78,14 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
         id
     }
 
-    pub fn get_node(&self, id: NodeID) -> &N {
+    pub fn get_node(&self, id: NodeID) -> &NodeData {
         debug_assert!(self.node_store.exists(id), "invalid NodeID: {id:?}");
-        &self.node_store.get(id).property
+        &self.node_store.get(id).data
     }
 
-    pub fn get_edge(&self, id: EdgeID) -> &E {
+    pub fn get_edge(&self, id: EdgeID) -> &EdgeData {
         debug_assert!(self.edge_store.exists(id), "invalid EdgeID: {id:?}");
-        &self.edge_store.get(id).property
+        &self.edge_store.get(id).data
     }
 
     pub fn get_connected_nodes(&self, id: EdgeID) -> ConnectedNodes {
@@ -91,8 +100,8 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
         self.node_store.get(id).edges.iter()
             .filter(|edge_id| {
                 let edge = self.edge_store.get(**edge_id);
-                edge.from == id || edge.kind == EdgeKind::Undirected
-            }).cloned().collect()
+                edge.from == id || edge.data.kind == EdgeKind::Undirected
+            }).copied().collect()
     }
 
     // not sure if this should count undirected edges
@@ -102,7 +111,7 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
         self.node_store.get(id).edges.iter()
             .filter(|edge_id| {
                 let edge = self.edge_store.get(**edge_id);
-                edge.to == id || edge.kind == EdgeKind::Undirected
+                edge.to == id || edge.data.kind == EdgeKind::Undirected
             }).copied().collect()
     }
 
@@ -113,7 +122,7 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
         self.node_store.get(from).edges.iter()
             .filter_map(|edge_id| {
                 let edge = self.edge_store.get(*edge_id);
-                match edge.kind {
+                match edge.data.kind {
                     EdgeKind::Directed => {
                         if edge.to == to {
                             Some(*edge_id)
@@ -171,7 +180,7 @@ impl<N, E> Graph<N, E> where N: Copy + PartialEq, E: Copy + PartialEq {
 }
 
 // slow, but should work for testing
-impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + Send, E: Debug + Copy + PartialEq + Hash + Eq + Sync + Send {
+impl PartialEq for Graph {
     fn eq(&self, other: &Self) -> bool {
         if(self.node_store.len()) != other.node_store.len() || self.edge_store.len() != other.edge_store.len() {
             trace!("graph size mismatch: self has {} nodes and {} edges but other has {} nodes and {} edges", self.node_store.len(), self.edge_store.len(), other.node_store.len(), other.edge_store.len());
@@ -181,13 +190,13 @@ impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash +
         let (self_sets, other_sets) = rayon::join(
             || {
                 let nodes = self.node_store.all()
-                    .map(|n| &n.item.property)
+                    .map(|(_, n)| &n.data.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
                     });
                 let edges = self.edge_store.all()
-                    .map(|n| &n.item.property)
+                    .map(|(_, e)| &e.data.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
@@ -196,13 +205,13 @@ impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash +
             },
             || {
                 let nodes = other.node_store.all()
-                    .map(|n| &n.item.property)
+                    .map(|(_, n)| &n.data.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
                     });
                 let edges = other.edge_store.all()
-                    .map(|n| &n.item.property)
+                    .map(|(_, e)| &e.data.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
@@ -234,7 +243,7 @@ impl <N, E> PartialEq for Graph<N, E> where N: Debug + Copy + PartialEq + Hash +
     }
 }
 
-impl <N, E> Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + Send, E: Debug + Copy + PartialEq + Hash + Eq + Sync + Send {
+impl Graph {
     fn backtrack(
         &self,
         other: &Self,
@@ -320,11 +329,6 @@ impl <N, E> Graph<N, E> where N: Debug + Copy + PartialEq + Hash + Eq + Sync + S
     }
 }
 
-trait IDIntoUSize {
-    fn as_usize(&self) -> usize;
-    fn from_usize(id: usize) -> Self;
-}
-
 #[derive(Debug)]
 pub struct ConnectedNodes {
     pub from: NodeID,
@@ -335,7 +339,7 @@ pub struct ConnectedNodes {
 //TODO: make this statically polymorphic
 struct StoreIterable<'a, T, I> {
     store: &'a Store<T, I>,
-    inner: Box<dyn Iterator<Item = &'a Entry<T, I>> + 'a>,
+    inner: Box<dyn Iterator<Item = (I, &'a T)> + 'a>,
     // inner: It,
 }
 
@@ -353,7 +357,7 @@ impl<T, I> Iterator for StoreIterable<'_, T, I> where
     type Item = I;
 
     fn next(&mut self) -> Option<I> {
-        self.inner.next().map(|e| e.id)
+        self.inner.next().map(|(id, _)| id)
     }
 
     fn count(self) -> usize {

@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 
 use bitvec::prelude::*;
-use crate::graph::IDIntoUSize;
+
+use crate::database::graph::IDIntoUSize;
 
 const TAKEN: bool = true;
 const AVAILABLE: bool = false;
@@ -13,7 +14,7 @@ pub struct AvailabilityManager<T> {
 }
 
 
-impl<T: IDIntoUSize + Copy> AvailabilityManager<T> {
+impl<T: IDIntoUSize> AvailabilityManager<T> {
     pub fn new() -> Self {
         AvailabilityManager { 
             ids: BitVec::new(),
@@ -29,6 +30,7 @@ impl<T: IDIntoUSize + Copy> AvailabilityManager<T> {
                     *bit = TAKEN;
                 }
 
+                debug_assert!(!self.is_taken(T::from_usize(idx)), "tried to get unabailable id, idx: {idx}");
                 T::from_usize(idx)
             },
             None => {
@@ -37,18 +39,9 @@ impl<T: IDIntoUSize + Copy> AvailabilityManager<T> {
             }
         }
     }
-    //
-    // pub fn mark_as_taken(&mut self, id: T) {
-    //     assert!(self.ids.len() > id.get_inner(), "tried to add id bigger than the graph");
-    //
-    //     unsafe {
-    //         let mut bit = self.ids.get_unchecked_mut(id.into());
-    //         *bit = TAKEN;
-    //     }
-    // }
 
     pub fn mark_as_available(&mut self, id: T) {
-        assert!(self.ids.len() > id.as_usize(), "tried to mark id bigger than the graph");
+        debug_assert!(self.ids.len() > id.as_usize(), "tried to mark id bigger than the graph");
 
         unsafe {
             let mut bit = self.ids.get_unchecked_mut(id.as_usize());
@@ -57,10 +50,7 @@ impl<T: IDIntoUSize + Copy> AvailabilityManager<T> {
     }
 
     pub fn is_taken(&self, id: T) -> bool {
-        assert!(self.ids.len() > id.as_usize(), "tried to check for id bigger than the graph");
-        // if id.get_inner() >= self.ids.len() {
-        //     return AVAILABLE;
-        // }
+        debug_assert!(self.ids.len() > id.as_usize(), "tried to check for id bigger than the graph");
 
         self.ids[id.as_usize()]
     }
