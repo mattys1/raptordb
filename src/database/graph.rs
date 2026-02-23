@@ -12,18 +12,22 @@ pub(in super) mod id;
 use log::trace;
 use log::warn;
 
+use crate::database::graph::edge::EdgeData;
 use crate::database::graph::edge::EdgeProperty;
 use crate::database::graph::id::EdgeID;
 use crate::database::graph::id::EdgePropertyID;
 use crate::database::graph::id::EdgePropertyTypeID;
 use crate::database::graph::id::NodePropertyID;
 use crate::database::graph::id::NodePropertyTypeID;
+use crate::database::graph::node::NodeData;
 use crate::database::graph::node::NodeProperty;
 use crate::database::graph::{edge::Edge, node::Node};
 
 pub(in crate::database) use crate::database::graph::id::IDIntoUSize;
 pub use crate::database::graph::edge::EdgeKind;
 
+use crate::database::importer::Lattitude;
+use crate::database::importer::Longitude;
 use crate::database::store::Store;
 use crate::database::graph::id::NodeID;
 
@@ -50,11 +54,11 @@ impl Graph {
         StoreIterable::new(&self.edge_store)
     }
 
-    pub fn add_node(&mut self, property: NodeProperty) -> NodeID {
-        self.node_store.add(Node { edges: Vec::new(), property })
+    pub fn add_node(&mut self, data: NodeData) -> NodeID {
+        self.node_store.add(Node { edges: Vec::new(), data })
     }
 
-    pub fn add_edge(&mut self, from: NodeID, to: NodeID, property: EdgeProperty, kind: EdgeKind,) -> EdgeID {
+    pub fn add_edge(&mut self, from: NodeID, to: NodeID, data: EdgeData) -> EdgeID {
         debug_assert!(self.node_store.exists(from), "invalid 'from' NodeID: {from:?}");
         debug_assert!(self.node_store.exists(to), "invalid 'to' NodeID: {to:?}");
         debug_assert!(from != to, "cyclical edges are not supported: from and to are the same NodeID: {from:?}");
@@ -63,7 +67,7 @@ impl Graph {
             warn!("parallel edge detected: there is already an edge between {from:?} and {to:?}");
         } 
 
-        let id = self.edge_store.add(Edge { from, to, kind, property });
+        let id = self.edge_store.add(Edge { from, to, data});
 
         let to_node = self.node_store.get_mut(self.edge_store.get(id).to);
         to_node.edges.push(id);
@@ -74,14 +78,14 @@ impl Graph {
         id
     }
 
-    pub fn get_node(&self, id: NodeID) -> NodeProperty {
+    pub fn get_node(&self, id: NodeID) -> &NodeData {
         debug_assert!(self.node_store.exists(id), "invalid NodeID: {id:?}");
-        self.node_store.get(id).property
+        &self.node_store.get(id).data
     }
 
-    pub fn get_edge(&self, id: EdgeID) -> EdgeProperty {
+    pub fn get_edge(&self, id: EdgeID) -> &EdgeData {
         debug_assert!(self.edge_store.exists(id), "invalid EdgeID: {id:?}");
-        self.edge_store.get(id).property
+        &self.edge_store.get(id).data
     }
 
     pub fn get_connected_nodes(&self, id: EdgeID) -> ConnectedNodes {
@@ -96,7 +100,7 @@ impl Graph {
         self.node_store.get(id).edges.iter()
             .filter(|edge_id| {
                 let edge = self.edge_store.get(**edge_id);
-                edge.from == id || edge.kind == EdgeKind::Undirected
+                edge.from == id || edge.data.kind == EdgeKind::Undirected
             }).copied().collect()
     }
 
@@ -107,7 +111,7 @@ impl Graph {
         self.node_store.get(id).edges.iter()
             .filter(|edge_id| {
                 let edge = self.edge_store.get(**edge_id);
-                edge.to == id || edge.kind == EdgeKind::Undirected
+                edge.to == id || edge.data.kind == EdgeKind::Undirected
             }).copied().collect()
     }
 
@@ -118,7 +122,7 @@ impl Graph {
         self.node_store.get(from).edges.iter()
             .filter_map(|edge_id| {
                 let edge = self.edge_store.get(*edge_id);
-                match edge.kind {
+                match edge.data.kind {
                     EdgeKind::Directed => {
                         if edge.to == to {
                             Some(*edge_id)
@@ -186,13 +190,13 @@ impl PartialEq for Graph {
         let (self_sets, other_sets) = rayon::join(
             || {
                 let nodes = self.node_store.all()
-                    .map(|(_, n)| &n.property)
+                    .map(|(_, n)| &n.data.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
                     });
                 let edges = self.edge_store.all()
-                    .map(|(_, e)| &e.property)
+                    .map(|(_, e)| &e.data.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
@@ -201,13 +205,13 @@ impl PartialEq for Graph {
             },
             || {
                 let nodes = other.node_store.all()
-                    .map(|(_, n)| &n.property)
+                    .map(|(_, n)| &n.data.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
                     });
                 let edges = other.edge_store.all()
-                    .map(|(_, e)| &e.property)
+                    .map(|(_, e)| &e.data.property)
                     .fold(HashMap::new(), |mut acc, prop| {
                         *acc.entry(prop).or_insert(0) += 1;
                         acc
