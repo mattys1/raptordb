@@ -6,6 +6,7 @@ use serde_json::Number;
 
 use crate::database::{graph::{EdgeID, IDIntoUSize, NodeID, id::{EdgePropertyID, EdgePropertyTypeID}}, property_manager::PropertyIdentifier};
 
+/// TODO: we should only have directed edges, an undirected edge should be 2 directed edges
 #[derive(Debug, PartialEq, Clone, Copy, Hash, Eq)]
 pub enum EdgeKind {
     Directed,
@@ -58,6 +59,7 @@ impl From<f64> for EdgeCost {
     }
 }
 
+/// TODO: have multiple cost types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) struct EdgeData {
     pub(super) cost: EdgeCost,

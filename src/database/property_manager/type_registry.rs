@@ -7,32 +7,44 @@ use crate::database::{graph::IDIntoUSize, property_manager::{PropertyField, Prop
 
 // TODO: Support user-defined types?
 #[derive(PartialEq, Debug, Display, Clone, Copy)]
-pub(super) enum FieldType {
+pub(crate) enum FieldType {
     Integer,
     Float,
     String,
     Boolean,
 }
 
-pub(super) struct TypeDescriptor<TypeId> {
-    id: TypeId,
-    fields: Vec<FieldDescriptor>,
+#[derive(Debug, Clone)]
+pub(crate) struct TypeDescriptor {
+    pub(in crate::database) name: String,
+    pub(in crate::database) fields: Vec<FieldDescriptor>,
 }
 
-impl<TypeId> TypeDescriptor<TypeId> {
+impl TypeDescriptor {
+    pub fn new(name: String, fields: Vec<FieldDescriptor>) -> Self {
+        TypeDescriptor { name, fields }
+    }
+
     pub fn field_count(&self) -> usize {
         self.fields.len()
     }
 }
 
-pub(super) struct FieldDescriptor {
-    pub(super) name: PropertyName,
-    pub(super) field_type: FieldType,
-    pub(super) nullable: bool,
+#[derive(Debug, Clone)]
+pub(crate) struct FieldDescriptor {
+    pub(in crate::database) name: PropertyName,
+    pub(in crate::database) field_type: FieldType,
+    pub(in crate::database) nullable: bool,
+}
+
+impl FieldDescriptor {
+   pub fn new(name: PropertyName, field_type: FieldType, nullable: bool) -> Self {
+        FieldDescriptor { name, field_type, nullable }
+    } 
 }
 
 pub(super) struct TypeRegistry<TypeId> {
-    types: Store<TypeDescriptor<TypeId>, TypeId>,
+    types: Store<TypeDescriptor, TypeId>,
     type_by_name: HashMap<String, TypeId>
 }
 
@@ -43,17 +55,26 @@ impl<TypeId> TypeRegistry<TypeId> where TypeId: Copy + IDIntoUSize + Debug {
     }
 
     // TODO: make this return an id
-    pub fn add_type(&mut self, name: String, fields: Vec<FieldDescriptor>) -> &TypeDescriptor<TypeId> {
-        let id = TypeId::from_usize(self.type_by_name.len()); // Simple ID generation strategy
-        let descriptor = TypeDescriptor { id, fields };
-        self.type_by_name.insert(name.to_string(), id);
+    pub fn add_type(&mut self, descriptor: TypeDescriptor) -> TypeId {
+        let id = TypeId::from_usize(self.type_by_name.len());
+        self.type_by_name.insert(descriptor.name.clone(), id);
         self.types.add(descriptor);
 
-        self.types.get(*self.type_by_name.get(&name).unwrap()) 
+        id
     }
 
     pub fn validate_property<'a>(&'a self, id: TypeId, fields: &'a [PropertyField]) -> Result<ValidatedProperty<'a>, PropertyValidationError> {
         ValidatedProperty::new(self, id, fields)
+    }
+
+    pub fn get_type(&self, id: TypeId) -> &TypeDescriptor {
+        debug_assert!(self.types.exists(id), "Tried retrieving non existant type");
+
+        self.types.get(id)
+    }
+
+    pub fn get_by_name(&self, name: &str) -> Option<TypeId> {
+        self.type_by_name.get(name).copied()
     }
 }
 

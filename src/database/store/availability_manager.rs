@@ -54,7 +54,9 @@ impl<T: IDIntoUSize> AvailabilityManager<T> {
 
         self.ids[id.as_usize()]
     }
+}
 
+impl <T> AvailabilityManager<T> {
     pub fn taken_count(&self) -> usize {
         self.ids.count_ones()
     }

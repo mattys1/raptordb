@@ -56,16 +56,12 @@ impl<T, I> Store<T, I> where I: IDIntoUSize + Copy + Debug {
     pub(super) fn exists(&self, id: I) -> bool {
         self.availability.is_taken(id)
     }
+}
 
-    pub(super) fn len(&self) -> usize {
+impl<T, I> Store<T, I> {
+    pub(crate) fn len(&self) -> usize {
         self.availability.taken_count()
     }
-
-    // pub fn replace(&mut self, entry: Entry<T, I>) {
-    //     debug_assert!(self.availability.is_taken(entry.id), "Trying to get not existing element, id: {id:?}");
-    //
-    //     self.items[entry.id.get_inner()].item = entry.item
-    // }
 }
 
 impl<T, I> Debug for Store<T, I> where T: Debug, I: IDIntoUSize + Copy + Debug {
