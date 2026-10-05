@@ -23,7 +23,7 @@ use crate::database::graph::node::NodeData;
 use crate::database::graph::node::NodeProperty;
 use crate::database::graph::{edge::Edge, node::Node};
 
-pub(in crate::database) use crate::database::graph::id::IDIntoUSize;
+pub(in crate::database) use crate::database::graph::id::Id;
 pub use crate::database::graph::edge::EdgeKind;
 
 use crate::database::importer::Lattitude;
@@ -344,7 +344,7 @@ struct StoreIterable<'a, T, I> {
 }
 
 impl<'a, T, I> StoreIterable<'a, T, I> where 
-    I: IDIntoUSize + Copy + Debug {
+    I: Id {
     pub fn new(store: &'a Store<T, I>) -> Self {
         // let inner = Box::new(graph.node_store.all().map(|entry| entry.id));
         let inner = store.all();
@@ -353,7 +353,7 @@ impl<'a, T, I> StoreIterable<'a, T, I> where
 }
 
 impl<T, I> Iterator for StoreIterable<'_, T, I> where
-    I: IDIntoUSize + Copy + Debug {
+    I: Id {
     type Item = I;
 
     fn next(&mut self) -> Option<I> {

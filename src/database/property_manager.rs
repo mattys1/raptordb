@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use derive_more::{Display, From};
 
-use crate::database::{graph::IDIntoUSize, property_manager::{property::{PropertyFieldContents, PropertyStore}, type_registry::{FieldDescriptor, PropertyValidationError, TypeRegistry, ValidatedProperty}}};
+use crate::database::{graph::Id, property_manager::{property::{PropertyFieldContents, PropertyStore}, type_registry::{FieldDescriptor, PropertyValidationError, TypeRegistry, ValidatedProperty}}};
 
 mod type_registry;
 mod property;
@@ -13,8 +13,8 @@ pub(super) struct PropertyManager<PropertyId, PropertyTypeId> {
 }
 
 impl <PropertyId, PropertyTypeId> PropertyManager<PropertyId, PropertyTypeId> where
-    PropertyId: IDIntoUSize + Copy + Debug,
-    PropertyTypeId: IDIntoUSize + Copy + Debug {
+    PropertyId: Id,
+    PropertyTypeId: Id {
     pub fn new() -> Self {
         Self { type_registry: TypeRegistry::new(), property_store: PropertyStore::new() }
     }

@@ -2,15 +2,15 @@ use std::{fmt::{self, Debug}, marker::Copy};
 
 use derive_more::{Display, derive};
 
-use crate::database::{graph::IDIntoUSize, property_manager::{PropertyField, ValidatedProperty, type_registry::TypeDescriptor}, store::Store};
+use crate::database::{graph::Id, property_manager::{PropertyField, ValidatedProperty, type_registry::TypeDescriptor}, store::Store};
 
 pub(super) struct PropertyStore<PropertyId, PropertyTypeId> {
     items: Store<Properties<PropertyId>, PropertyTypeId>
 }
 
 impl <PropertyId, PropertyTypeId> PropertyStore<PropertyId, PropertyTypeId> where
-    PropertyTypeId: IDIntoUSize + Copy + Debug,
-    PropertyId: IDIntoUSize + Debug + Copy {
+    PropertyTypeId: Id,
+    PropertyId: Id {
     pub fn new() -> Self {
         PropertyStore { items: Store::new() }
     }
@@ -51,7 +51,7 @@ struct Properties<PropertyId> {
 impl<PropertyId> Properties<PropertyId> {
     fn new<PropertyTypeId>(type_descriptor: &TypeDescriptor<PropertyTypeId>) -> Self
     where
-        PropertyTypeId: IDIntoUSize + Copy + Debug,
+        PropertyTypeId: Id,
     {
         Properties { fields: Vec::with_capacity(type_descriptor.field_count()) }
     }

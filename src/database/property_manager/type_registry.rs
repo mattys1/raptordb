@@ -3,7 +3,7 @@ use std::{collections::HashMap, error::Error, fmt::{Debug, Display, Formatter}, 
 use bitvec::field;
 use derive_more::{Display, Error};
 
-use crate::database::{graph::IDIntoUSize, property_manager::{PropertyField, PropertyFieldContents, PropertyName, type_registry}, store::Store};
+use crate::database::{graph::Id, property_manager::{PropertyField, PropertyFieldContents, PropertyName, type_registry}, store::Store};
 
 // TODO: Support user-defined types?
 #[derive(PartialEq, Debug, Display, Clone, Copy)]
@@ -36,7 +36,7 @@ pub(super) struct TypeRegistry<TypeId> {
     type_by_name: HashMap<String, TypeId>
 }
 
-impl<TypeId> TypeRegistry<TypeId> where TypeId: Copy + IDIntoUSize + Debug {
+impl<TypeId> TypeRegistry<TypeId> where TypeId: Id {
     pub fn new() -> Self {
         // TypeRegistry { types: Store::new() }
         TypeRegistry { types: Store::new(), type_by_name: HashMap::new() }
@@ -44,7 +44,7 @@ impl<TypeId> TypeRegistry<TypeId> where TypeId: Copy + IDIntoUSize + Debug {
 
     // TODO: make this return an id
     pub fn add_type(&mut self, name: String, fields: Vec<FieldDescriptor>) -> &TypeDescriptor<TypeId> {
-        let id = TypeId::from_usize(self.type_by_name.len()); // Simple ID generation strategy
+        let id = TypeId::from(self.type_by_name.len()); // Simple ID generation strategy
         let descriptor = TypeDescriptor { id, fields };
         self.type_by_name.insert(name.to_string(), id);
         self.types.add(descriptor);
@@ -63,7 +63,7 @@ pub(super) struct ValidatedProperty<'a> {
 }
 
 impl <'a> ValidatedProperty<'a> {
-    fn new<TypeId>(registry: &TypeRegistry<TypeId>, id: TypeId, fields: &'a [PropertyField]) -> Result<Self, PropertyValidationError> where TypeId: IDIntoUSize + Copy + Debug {
+    fn new<TypeId>(registry: &TypeRegistry<TypeId>, id: TypeId, fields: &'a [PropertyField]) -> Result<Self, PropertyValidationError> where TypeId: Id {
         let type_descriptor = registry.types.get(id);
 
         if fields.len() != type_descriptor.field_count() {

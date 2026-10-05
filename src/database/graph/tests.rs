@@ -3,7 +3,7 @@
 mod test { 
     use ordered_float::OrderedFloat;
 
-    use crate::database::graph::{EdgeKind, Graph, IDIntoUSize};
+    use crate::database::graph::{EdgeKind, Graph};
     use crate::database::graph::id::{NodePropertyID, NodePropertyTypeID, EdgePropertyID, EdgePropertyTypeID};
     use crate::database::importer::{Lattitude, Longitude};
     use crate::database::property_manager::PropertyIdentifier;
@@ -11,10 +11,10 @@ mod test {
     use crate::database::graph::edge::EdgeData;
 
     fn node_prop(id: usize) -> PropertyIdentifier<NodePropertyID, NodePropertyTypeID> {
-        PropertyIdentifier { id: NodePropertyID::from_usize(id), type_id: NodePropertyTypeID::from_usize(1) }
+        PropertyIdentifier { id: NodePropertyID::from(id), type_id: NodePropertyTypeID::from(1) }
     }
     fn edge_prop(id: usize) -> PropertyIdentifier<EdgePropertyID, EdgePropertyTypeID> {
-        PropertyIdentifier { id: EdgePropertyID::from_usize(id), type_id: EdgePropertyTypeID::from_usize(1) }
+        PropertyIdentifier { id: EdgePropertyID::from(id), type_id: EdgePropertyTypeID::from(1) }
     }
 
     fn lat(id: usize) -> Lattitude {

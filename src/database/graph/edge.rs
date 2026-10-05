@@ -4,7 +4,7 @@ use derive_more::{Display, Eq, From};
 use ordered_float::OrderedFloat;
 use serde_json::Number;
 
-use crate::database::{graph::{EdgeID, IDIntoUSize, NodeID, id::{EdgePropertyID, EdgePropertyTypeID}}, property_manager::PropertyIdentifier};
+use crate::database::{graph::{EdgeID, NodeID, id::{EdgePropertyID, EdgePropertyTypeID}}, property_manager::PropertyIdentifier};
 
 #[derive(Debug, PartialEq, Clone, Copy, Hash, Eq)]
 pub enum EdgeKind {
@@ -45,7 +45,7 @@ impl Hash for Edge where {
 
 impl From<EdgeID> for geojson::feature::Id {
     fn from(value: EdgeID) -> Self {
-        geojson::feature::Id::Number(Number::from(value.as_usize()))
+        geojson::feature::Id::Number(Number::from(Into::<usize>::into(value)))
     }
 }
 

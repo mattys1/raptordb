@@ -1,6 +1,6 @@
 use serde_json::Number;
 
-use crate::database::{graph::{IDIntoUSize, NodeID, id::{EdgeID, NodePropertyID, NodePropertyTypeID}}, importer::{Lattitude, Longitude}, property_manager::PropertyIdentifier};
+use crate::database::{graph::{NodeID, id::{EdgeID, NodePropertyID, NodePropertyTypeID}}, importer::{Lattitude, Longitude}, property_manager::PropertyIdentifier};
 
 #[derive(Debug, Eq)]
 pub(super) struct Node {
@@ -26,7 +26,7 @@ impl PartialEq for Node where {
 
 impl From<NodeID> for geojson::feature::Id {
     fn from(value: NodeID) -> Self {
-        geojson::feature::Id::Number(Number::from(value.as_usize()))
+        geojson::feature::Id::Number(Number::from(Into::<usize>::into(value)))
     }
 }
 
