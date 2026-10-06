@@ -1,6 +1,8 @@
+mod id;
 mod graph;
 mod store;
 mod property_manager;
+mod cluster;
 pub(crate) mod importer;
 pub(crate) mod exporter;
 
@@ -8,7 +10,7 @@ use std::path::Path;
 
 use graph::Graph;
 
-use crate::database::{exporter::export_geojson, graph::id::{EdgePropertyID, EdgePropertyTypeID, NodePropertyID, NodePropertyTypeID}, importer::{GraphNode, GraphWay, ImportFormat, import_pbf, import_xml}, property_manager::PropertyManager};
+use crate::database::{exporter::export_geojson, id::{EdgePropertyID, EdgePropertyTypeID, NodePropertyID, NodePropertyTypeID}, importer::{GraphNode, GraphWay, ImportFormat, import_pbf, import_xml}, property_manager::PropertyManager};
 
 pub struct Database {
     graph: Graph,

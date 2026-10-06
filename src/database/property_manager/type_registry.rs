@@ -3,7 +3,7 @@ use std::{collections::HashMap, error::Error, fmt::{Debug, Display, Formatter}, 
 use bitvec::field;
 use derive_more::{Display, Error};
 
-use crate::database::{graph::Id, property_manager::{PropertyField, PropertyFieldContents, PropertyName, type_registry}, store::Store};
+use crate::database::{id::Id, property_manager::{PropertyField, PropertyFieldContents, PropertyName, type_registry}, store::Store};
 
 // TODO: Support user-defined types?
 #[derive(PartialEq, Debug, Display, Clone, Copy)]

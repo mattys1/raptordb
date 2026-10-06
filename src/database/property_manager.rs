@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use derive_more::{Display, From};
 
-use crate::database::{graph::Id, property_manager::{property::{PropertyFieldContents, PropertyStore}, type_registry::{FieldDescriptor, PropertyValidationError, TypeRegistry, ValidatedProperty}}};
+use crate::database::{id::Id, property_manager::{property::{PropertyFieldContents, PropertyStore}, type_registry::{FieldDescriptor, PropertyValidationError, TypeRegistry, ValidatedProperty}}};
 
 mod type_registry;
 mod property;

@@ -2,7 +2,7 @@ mod availability_manager;
 
 use std::fmt::Debug;
 
-use crate::database::{graph::Id, store::availability_manager::AvailabilityManager};
+use crate::database::{id::Id, store::availability_manager::AvailabilityManager};
 
 
 // TODO: introduce an ConstantStore struct with a builder that still supports things like pagination and storage just like the normal store, but not deletion and growth

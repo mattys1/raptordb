@@ -7,7 +7,7 @@ use ordered_float::OrderedFloat;
 use osm_xml::OSM;
 use osmpbf::{Element, ElementReader};
 
-use crate::database::graph::id::NodeID;
+use crate::database::id::NodeID;
 
 use super::graph::{EdgeKind, Graph};
 

@@ -4,7 +4,7 @@ mod test {
     use ordered_float::OrderedFloat;
 
     use crate::database::graph::{EdgeKind, Graph};
-    use crate::database::graph::id::{NodePropertyID, NodePropertyTypeID, EdgePropertyID, EdgePropertyTypeID};
+    use crate::database::id::{NodePropertyID, NodePropertyTypeID, EdgePropertyID, EdgePropertyTypeID};
     use crate::database::importer::{Lattitude, Longitude};
     use crate::database::property_manager::PropertyIdentifier;
     use crate::database::graph::node::NodeData;

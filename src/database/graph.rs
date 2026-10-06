@@ -7,29 +7,28 @@ use std::hash::Hash;
 
 mod node;
 mod edge;
-pub(in super) mod id;
 
 use log::trace;
 use log::warn;
 
 use crate::database::graph::edge::EdgeData;
 use crate::database::graph::edge::EdgeProperty;
-use crate::database::graph::id::EdgeID;
-use crate::database::graph::id::EdgePropertyID;
-use crate::database::graph::id::EdgePropertyTypeID;
-use crate::database::graph::id::NodePropertyID;
-use crate::database::graph::id::NodePropertyTypeID;
+use crate::database::id::EdgeID;
+use crate::database::id::EdgePropertyID;
+use crate::database::id::EdgePropertyTypeID;
+use crate::database::id::NodePropertyID;
+use crate::database::id::NodePropertyTypeID;
 use crate::database::graph::node::NodeData;
 use crate::database::graph::node::NodeProperty;
 use crate::database::graph::{edge::Edge, node::Node};
 
-pub(in crate::database) use crate::database::graph::id::Id;
 pub use crate::database::graph::edge::EdgeKind;
 
 use crate::database::importer::Lattitude;
 use crate::database::importer::Longitude;
 use crate::database::store::Store;
-use crate::database::graph::id::NodeID;
+use crate::database::id::NodeID;
+use crate::database::id::Id;
 
 #[derive(Debug)]
 pub struct Graph {

@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use bitvec::prelude::*;
 
-use crate::database::graph::Id;
+use crate::database::id::Id;
 
 const TAKEN: bool = true;
 const AVAILABLE: bool = false;

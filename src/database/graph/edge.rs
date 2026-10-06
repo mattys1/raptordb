@@ -4,7 +4,7 @@ use derive_more::{Display, Eq, From};
 use ordered_float::OrderedFloat;
 use serde_json::Number;
 
-use crate::database::{graph::{EdgeID, NodeID, id::{EdgePropertyID, EdgePropertyTypeID}}, property_manager::PropertyIdentifier};
+use crate::database::{id::{EdgeID, EdgePropertyID, EdgePropertyTypeID, NodeID}, property_manager::PropertyIdentifier};
 
 #[derive(Debug, PartialEq, Clone, Copy, Hash, Eq)]
 pub enum EdgeKind {

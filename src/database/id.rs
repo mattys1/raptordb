@@ -23,3 +23,5 @@ new_id!(NodePropertyType);
 new_id!(Edge);
 new_id!(EdgeProperty);
 new_id!(EdgePropertyType);
+
+new_id!(Cluster);

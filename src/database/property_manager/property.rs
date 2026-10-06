@@ -2,7 +2,7 @@ use std::{fmt::{self, Debug}, marker::Copy};
 
 use derive_more::{Display, derive};
 
-use crate::database::{graph::Id, property_manager::{PropertyField, ValidatedProperty, type_registry::TypeDescriptor}, store::Store};
+use crate::database::{id::Id, property_manager::{PropertyField, ValidatedProperty, type_registry::TypeDescriptor}, store::Store};
 
 pub(super) struct PropertyStore<PropertyId, PropertyTypeId> {
     items: Store<Properties<PropertyId>, PropertyTypeId>
