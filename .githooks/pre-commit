@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+STAGED_RS="$(git diff --cached --name-only --diff-filter=ACM | grep '\.rs$' || true)"
+
+if [ -z "$STAGED_RS" ]; then
+  exit 0
+fi
+
+cd "$ROOT"
+
+cargo fmt --all
+cargo clippy --fix --allow-staged --allow-dirty
+
+# Re-stage only the files that were originally staged, so fmt/clippy
+# changes to unrelated files stay out of the commit
+mapfile -t STAGED <<< "$STAGED_RS"
+git -C "$ROOT" add -u -- "${STAGED[@]}"
