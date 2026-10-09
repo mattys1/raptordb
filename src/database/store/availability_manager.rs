@@ -13,13 +13,12 @@ pub struct AvailabilityManager<T> {
     _marker: PhantomData<T>,
 }
 
-
 impl<T: Id> AvailabilityManager<T> {
     pub fn new() -> Self {
-        AvailabilityManager { 
+        AvailabilityManager {
             ids: BitVec::new(),
-            _marker: PhantomData
-        } 
+            _marker: PhantomData,
+        }
     }
 
     pub fn get_available(&mut self) -> T {
@@ -30,9 +29,12 @@ impl<T: Id> AvailabilityManager<T> {
                     *bit = TAKEN;
                 }
 
-                debug_assert!(!self.is_taken(T::from(idx)), "tried to get unabailable id, idx: {idx}");
+                debug_assert!(
+                    !self.is_taken(T::from(idx)),
+                    "tried to get unabailable id, idx: {idx}"
+                );
                 T::from(idx)
-            },
+            }
             None => {
                 self.ids.push(TAKEN);
                 T::from(self.ids.len() - 1)
@@ -42,7 +44,10 @@ impl<T: Id> AvailabilityManager<T> {
 
     pub fn mark_as_available(&mut self, id: T) {
         let idx: usize = id.into();
-        debug_assert!(self.ids.len() > idx, "tried to mark id bigger than the graph");
+        debug_assert!(
+            self.ids.len() > idx,
+            "tried to mark id bigger than the graph"
+        );
 
         unsafe {
             let mut bit = self.ids.get_unchecked_mut(idx);
@@ -52,7 +57,10 @@ impl<T: Id> AvailabilityManager<T> {
 
     pub fn is_taken(&self, id: T) -> bool {
         let idx: usize = id.into();
-        debug_assert!(self.ids.len() > idx, "tried to check for id bigger than the graph");
+        debug_assert!(
+            self.ids.len() > idx,
+            "tried to check for id bigger than the graph"
+        );
 
         self.ids[idx]
     }

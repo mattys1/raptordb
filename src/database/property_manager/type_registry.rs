@@ -1,9 +1,12 @@
-use std::{collections::HashMap, error::Error, fmt::{Debug, Display, Formatter}, usize};
+use std::{collections::HashMap, error::Error, fmt::Debug, usize};
 
-use bitvec::field;
-use derive_more::{Display, Error};
+use derive_more::Display;
 
-use crate::database::{id::Id, property_manager::{PropertyField, PropertyFieldContents, PropertyName, type_registry}, store::Store};
+use crate::database::{
+    id::Id,
+    property_manager::{PropertyField, PropertyFieldContents, PropertyName},
+    store::Store,
+};
 
 // TODO: Support user-defined types?
 #[derive(PartialEq, Debug, Display, Clone, Copy)]
@@ -33,69 +36,107 @@ pub(super) struct FieldDescriptor {
 
 pub(super) struct TypeRegistry<TypeId> {
     types: Store<TypeDescriptor<TypeId>, TypeId>,
-    type_by_name: HashMap<String, TypeId>
+    type_by_name: HashMap<String, TypeId>,
 }
 
-impl<TypeId> TypeRegistry<TypeId> where TypeId: Id {
+impl<TypeId> TypeRegistry<TypeId>
+where
+    TypeId: Id,
+{
     pub fn new() -> Self {
         // TypeRegistry { types: Store::new() }
-        TypeRegistry { types: Store::new(), type_by_name: HashMap::new() }
+        TypeRegistry {
+            types: Store::new(),
+            type_by_name: HashMap::new(),
+        }
     }
 
     // TODO: make this return an id
-    pub fn add_type(&mut self, name: String, fields: Vec<FieldDescriptor>) -> &TypeDescriptor<TypeId> {
+    pub fn add_type(
+        &mut self,
+        name: String,
+        fields: Vec<FieldDescriptor>,
+    ) -> &TypeDescriptor<TypeId> {
         let id = TypeId::from(self.type_by_name.len()); // Simple ID generation strategy
         let descriptor = TypeDescriptor { id, fields };
         self.type_by_name.insert(name.to_string(), id);
         self.types.add(descriptor);
 
-        self.types.get(*self.type_by_name.get(&name).unwrap()) 
+        self.types.get(*self.type_by_name.get(&name).unwrap())
     }
 
-    pub fn validate_property<'a>(&'a self, id: TypeId, fields: &'a [PropertyField]) -> Result<ValidatedProperty<'a>, PropertyValidationError> {
+    pub fn validate_property<'a>(
+        &'a self,
+        id: TypeId,
+        fields: &'a [PropertyField],
+    ) -> Result<ValidatedProperty<'a>, PropertyValidationError> {
         ValidatedProperty::new(self, id, fields)
     }
 }
 
-
 pub(super) struct ValidatedProperty<'a> {
-    fields: &'a [PropertyField] 
+    fields: &'a [PropertyField],
 }
 
-impl <'a> ValidatedProperty<'a> {
-    fn new<TypeId>(registry: &TypeRegistry<TypeId>, id: TypeId, fields: &'a [PropertyField]) -> Result<Self, PropertyValidationError> where TypeId: Id {
+impl<'a> ValidatedProperty<'a> {
+    fn new<TypeId>(
+        registry: &TypeRegistry<TypeId>,
+        id: TypeId,
+        fields: &'a [PropertyField],
+    ) -> Result<Self, PropertyValidationError>
+    where
+        TypeId: Id,
+    {
         let type_descriptor = registry.types.get(id);
 
         if fields.len() != type_descriptor.field_count() {
-            return Err(PropertyValidationError::InvalidFieldAmmount(type_descriptor.field_count(), fields.len()));
+            return Err(PropertyValidationError::InvalidFieldAmmount(
+                type_descriptor.field_count(),
+                fields.len(),
+            ));
         }
 
         for (idx, field) in fields.iter().enumerate() {
             if field.name != type_descriptor.fields[idx].name {
-                return Err(PropertyValidationError::InvalidFieldName(type_descriptor.fields[idx].name.clone(), field.name.clone()))
+                return Err(PropertyValidationError::InvalidFieldName(
+                    type_descriptor.fields[idx].name.clone(),
+                    field.name.clone(),
+                ));
             }
 
             match field.value {
                 PropertyFieldContents::Integer(_) => {
                     if type_descriptor.fields[idx].field_type != FieldType::Integer {
-                        return Err(PropertyValidationError::InvalidFieldType(type_descriptor.fields[idx].field_type, FieldType::Integer));
+                        return Err(PropertyValidationError::InvalidFieldType(
+                            type_descriptor.fields[idx].field_type,
+                            FieldType::Integer,
+                        ));
                     }
-                },
+                }
                 PropertyFieldContents::Float(_) => {
                     if type_descriptor.fields[idx].field_type != FieldType::Float {
-                        return Err(PropertyValidationError::InvalidFieldType(type_descriptor.fields[idx].field_type, FieldType::Float));
+                        return Err(PropertyValidationError::InvalidFieldType(
+                            type_descriptor.fields[idx].field_type,
+                            FieldType::Float,
+                        ));
                     }
-                },
+                }
                 PropertyFieldContents::String(_) => {
                     if type_descriptor.fields[idx].field_type != FieldType::String {
-                        return Err(PropertyValidationError::InvalidFieldType(type_descriptor.fields[idx].field_type, FieldType::String));
+                        return Err(PropertyValidationError::InvalidFieldType(
+                            type_descriptor.fields[idx].field_type,
+                            FieldType::String,
+                        ));
                     }
-                },
+                }
                 PropertyFieldContents::Boolean(_) => {
                     if type_descriptor.fields[idx].field_type != FieldType::Boolean {
-                        return Err(PropertyValidationError::InvalidFieldType(type_descriptor.fields[idx].field_type, FieldType::Boolean));
+                        return Err(PropertyValidationError::InvalidFieldType(
+                            type_descriptor.fields[idx].field_type,
+                            FieldType::Boolean,
+                        ));
                     }
-                },
+                }
             }
         }
 
@@ -114,7 +155,7 @@ pub(super) enum PropertyValidationError {
     #[display("Invalid field type - in type: {}, provided: {}", _0, _1)]
     InvalidFieldType(FieldType, FieldType),
     #[display("Invalid field ammount - in type: {}, provided: {}", _0, _1)]
-    InvalidFieldAmmount(usize, usize)
+    InvalidFieldAmmount(usize, usize),
 }
 
 impl Error for PropertyValidationError {}

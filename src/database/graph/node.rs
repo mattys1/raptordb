@@ -1,6 +1,10 @@
 use serde_json::Number;
 
-use crate::database::{id::{EdgeID, NodeID, NodePropertyID, NodePropertyTypeID}, importer::{Lattitude, Longitude}, property_manager::PropertyIdentifier};
+use crate::database::{
+    id::{EdgeID, NodeID, NodePropertyID, NodePropertyTypeID},
+    importer::{Lattitude, Longitude},
+    property_manager::PropertyIdentifier,
+};
 
 #[derive(Debug, Eq)]
 pub(super) struct Node {
@@ -10,18 +14,20 @@ pub(super) struct Node {
     pub(super) edges: Vec<EdgeID>,
 
     // pub(super) property: NodeProperty
-
-    pub(super) data: NodeData
+    pub(super) data: NodeData,
 }
 
-pub(super) type NodeProperty = PropertyIdentifier<NodePropertyID, NodePropertyTypeID>; 
+pub(super) type NodeProperty = PropertyIdentifier<NodePropertyID, NodePropertyTypeID>;
 
 // TODO: move edge and node comparision into the graph itself, so that elements dependant on id can also be compared
 // FIXME: this especially affects `Node`
-impl PartialEq for Node where {
+impl PartialEq for Node {
     fn eq(&self, other: &Self) -> bool {
-        self.data.lat == other.data.lat && self.data.lon == other.data.lon && self.data.property == other.data.property && self.edges.len() == other.edges.len()
-    } 
+        self.data.lat == other.data.lat
+            && self.data.lon == other.data.lon
+            && self.data.property == other.data.property
+            && self.edges.len() == other.edges.len()
+    }
 }
 
 impl From<NodeID> for geojson::feature::Id {
@@ -35,7 +41,7 @@ pub(crate) struct NodeData {
     pub lat: Lattitude,
     pub lon: Longitude,
 
-    pub(super) property: NodeProperty
+    pub(super) property: NodeProperty,
 }
 
 impl PartialEq for NodeData {

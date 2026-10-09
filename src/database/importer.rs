@@ -1,19 +1,14 @@
 // TODO: the whole thing should eventually become multithreaded
-use std::{collections::HashMap, error::Error, fs::File, path::Path};
+use std::{collections::HashMap, error::Error, path::Path};
 
 use derive_more::From;
-use log::warn;
 use ordered_float::OrderedFloat;
-use osm_xml::OSM;
-use osmpbf::{Element, ElementReader};
 
-use crate::database::id::NodeID;
-
-use super::graph::{EdgeKind, Graph};
+use super::graph::Graph;
 
 pub(crate) enum ImportFormat {
     OSM,
-    PBF
+    PBF,
 }
 
 #[derive(Clone, Copy, From, Debug, PartialEq, Hash, Eq)]
@@ -39,7 +34,6 @@ struct ImportedNode {
     lon: Longitude,
 }
 
-
 #[derive(Copy, Debug, Clone, PartialEq, Hash, Eq)]
 pub struct GraphNode {
     pub lat: Lattitude,
@@ -55,7 +49,7 @@ struct ImportedWay {
 
 #[derive(Copy, Debug, Clone, PartialEq, Hash, Eq)]
 pub struct GraphWay {
-    distance: OrderedFloat<f64> //TODO: newtype this probably
+    distance: OrderedFloat<f64>, //TODO: newtype this probably
 }
 
 fn haversine_distance(start: &GraphNode, end: &GraphNode) -> f64 {
@@ -72,8 +66,7 @@ fn haversine_distance(start: &GraphNode, end: &GraphNode) -> f64 {
     let delta_lon = (lon2 - lon1).to_radians();
 
     let a = (delta_lat / 2.0).sin() * (delta_lat / 2.0).sin()
-        + lat1_rad.cos() * lat2_rad.cos()
-        * (delta_lon / 2.0).sin() * (delta_lon / 2.0).sin();
+        + lat1_rad.cos() * lat2_rad.cos() * (delta_lon / 2.0).sin() * (delta_lon / 2.0).sin();
     let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
 
     EARTH_RADIUS_M * c
@@ -85,7 +78,7 @@ fn quantize_coord(v: f64) -> f64 {
     (v * COORD_QUANT).round() / COORD_QUANT
 }
 
-pub(super) fn import_pbf(path: &Path) -> Result<Graph, Box<dyn Error>> {
+pub(super) fn import_pbf(_path: &Path) -> Result<Graph, Box<dyn Error>> {
     todo!()
     // let reader = ElementReader::from_path(path)?;
     // let mut graph = Graph::new();
@@ -107,10 +100,10 @@ pub(super) fn import_pbf(path: &Path) -> Result<Graph, Box<dyn Error>> {
     //             let graph_id = graph.add_node(GraphNode { lat: OrderedFloat(lat).into(), lon: OrderedFloat(lon).into() });
     //             graph_id_by_import_id.insert(dense_node.id(), graph_id);
     //         },
-    //         Element::Way(way) => imported_ways.push(ImportedWay { 
+    //         Element::Way(way) => imported_ways.push(ImportedWay {
     //             node_refs: Iterator::collect(way.refs()),
     //             tags: way.tags().map(|(key, value)| { (key.into(), value.into()) } ).collect(),
-    //             for_graph: GraphWay { distance: OrderedFloat(1.) } // TODO: distance should probably be computed when adding to graph and base it on nodes 
+    //             for_graph: GraphWay { distance: OrderedFloat(1.) } // TODO: distance should probably be computed when adding to graph and base it on nodes
     //         }),
     //         Element::Relation(relation) => {
     //             warn!("Encountered relation with id {}, skipping", relation.id());
@@ -135,7 +128,7 @@ pub(super) fn import_pbf(path: &Path) -> Result<Graph, Box<dyn Error>> {
     //
     //         let Some(&start_node_graph) = graph_id_by_import_id.get(&start_node) else {
     //             warn!("Encountered way with dangling node id: {way:#?}");
-    //             return; 
+    //             return;
     //         };
     //         let Some(&end_node_graph) = graph_id_by_import_id.get(&end_node) else {
     //             warn!("Encountered way with dangling node id: {way:#?}");
@@ -150,7 +143,7 @@ pub(super) fn import_pbf(path: &Path) -> Result<Graph, Box<dyn Error>> {
     //
 }
 
-pub(super) fn import_xml(path: &Path) -> Result<Graph, Box<dyn Error>> {
+pub(super) fn import_xml(_path: &Path) -> Result<Graph, Box<dyn Error>> {
     todo!()
     // let file = File::open(path)?;
     // let doc = OSM::parse(file).unwrap();
@@ -164,7 +157,7 @@ pub(super) fn import_xml(path: &Path) -> Result<Graph, Box<dyn Error>> {
     //     let lat = quantize_coord(node.lat);
     //     let lon = quantize_coord(node.lon);
     //     let graph_id = graph.add_node(GraphNode { lat: OrderedFloat(lat).into(), lon: OrderedFloat(lon).into() });
-    //     graph_id_by_import_id.insert(node.id, graph_id); 
+    //     graph_id_by_import_id.insert(node.id, graph_id);
     // }
     //
     // for way in doc.ways.values() {
@@ -196,7 +189,7 @@ pub(super) fn import_xml(path: &Path) -> Result<Graph, Box<dyn Error>> {
     //
     //         let Some(&start_node_graph) = graph_id_by_import_id.get(&start_node) else {
     //             warn!("Encountered way with dangling node id: {way:#?}");
-    //             return; 
+    //             return;
     //         };
     //         let Some(&end_node_graph) = graph_id_by_import_id.get(&end_node) else {
     //             warn!("Encountered way with dangling node id: {way:#?}");
@@ -204,7 +197,7 @@ pub(super) fn import_xml(path: &Path) -> Result<Graph, Box<dyn Error>> {
     //         };
     //
     //         graph.add_edge(start_node_graph, end_node_graph, GraphWay { distance: OrderedFloat(haversine_distance(graph.get_node(start_node_graph), graph.get_node(end_node_graph))) }, kind);
-    //     });  
+    //     });
     // }
     //
     // Ok(graph)
@@ -243,7 +236,7 @@ mod tests {
     //         xml_graph: import_xml(&xml_path).expect("failed to import xml"),
     //         pbf_graph: import_pbf(&pbf_path).expect("failed to import pbf"),
     //     });
-    // } 
+    // }
     //
     // macro_rules! test_with_data {
     //     ($test_name:ident, |$xml:ident, $pbf:ident| $body:block) => {
@@ -267,7 +260,7 @@ mod tests {
     //     let node2 = GraphNode { lat: Lattitude(OrderedFloat(1.0)), lon: Longitude(OrderedFloat(1.0)) };
     //     let dist = haversine_distance(&node1, &node2);
     //
-    //     let expected = 157_249.381_271_943_97; 
+    //     let expected = 157_249.381_271_943_97;
     //     assert!((dist - expected).abs() < 1.0, "Expected {expected}, got {dist}");
     // }
     //

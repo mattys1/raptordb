@@ -1,18 +1,26 @@
-use std::{fmt::{self, Debug}, marker::Copy};
+use std::fmt::Debug;
 
-use derive_more::{Display, derive};
+use derive_more::Display;
 
-use crate::database::{id::Id, property_manager::{PropertyField, ValidatedProperty, type_registry::TypeDescriptor}, store::Store};
+use crate::database::{
+    id::Id,
+    property_manager::{ValidatedProperty, type_registry::TypeDescriptor},
+    store::Store,
+};
 
 pub(super) struct PropertyStore<PropertyId, PropertyTypeId> {
-    items: Store<Properties<PropertyId>, PropertyTypeId>
+    items: Store<Properties<PropertyId>, PropertyTypeId>,
 }
 
-impl <PropertyId, PropertyTypeId> PropertyStore<PropertyId, PropertyTypeId> where
+impl<PropertyId, PropertyTypeId> PropertyStore<PropertyId, PropertyTypeId>
+where
     PropertyTypeId: Id,
-    PropertyId: Id {
+    PropertyId: Id,
+{
     pub fn new() -> Self {
-        PropertyStore { items: Store::new() }
+        PropertyStore {
+            items: Store::new(),
+        }
     }
 
     pub fn add_type(&mut self, type_descriptor: &TypeDescriptor<PropertyTypeId>) -> PropertyTypeId {
@@ -28,7 +36,11 @@ impl <PropertyId, PropertyTypeId> PropertyStore<PropertyId, PropertyTypeId> wher
             }
         }
 
-        debug_assert_eq!(property.fields().len(), fields.len(), "REMOVE: property len doesnt equal type len");
+        debug_assert_eq!(
+            property.fields().len(),
+            fields.len(),
+            "REMOVE: property len doesnt equal type len"
+        );
 
         for (idx, field) in fields.iter_mut().enumerate() {
             field.add(property.fields()[idx].value.clone());
@@ -45,7 +57,7 @@ pub(super) enum PropertyFieldContents {
 }
 
 struct Properties<PropertyId> {
-    fields: Vec<Store<PropertyFieldContents, PropertyId>>
+    fields: Vec<Store<PropertyFieldContents, PropertyId>>,
 }
 
 impl<PropertyId> Properties<PropertyId> {
@@ -53,7 +65,8 @@ impl<PropertyId> Properties<PropertyId> {
     where
         PropertyTypeId: Id,
     {
-        Properties { fields: Vec::with_capacity(type_descriptor.field_count()) }
+        Properties {
+            fields: Vec::with_capacity(type_descriptor.field_count()),
+        }
     }
 }
-

@@ -17,6 +17,12 @@ fn main() {
     let map_path = Path::new(binding.as_str());
     let mut database = Database::new();
 
-    database.import_graph(map_path, &ImportFormat::PBF).expect("cant import graph");
-    database.export_graph(Path::new((workspace_root + "export/sacz_mniejszy.geojson").as_str())).expect("cant export");
+    database
+        .import_graph(map_path, &ImportFormat::PBF)
+        .expect("cant import graph");
+    database
+        .export_graph(Path::new(
+            (workspace_root + "export/sacz_mniejszy.geojson").as_str(),
+        ))
+        .expect("cant export");
 }

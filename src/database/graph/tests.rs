@@ -1,20 +1,28 @@
 #[cfg(all(test, not(feature = "disable_graph_unit_tests")))]
 #[cfg(test)]
-mod test { 
+mod test {
     use ordered_float::OrderedFloat;
 
+    use crate::database::graph::edge::EdgeData;
+    use crate::database::graph::node::NodeData;
     use crate::database::graph::{EdgeKind, Graph};
-    use crate::database::id::{NodePropertyID, NodePropertyTypeID, EdgePropertyID, EdgePropertyTypeID};
+    use crate::database::id::{
+        EdgePropertyID, EdgePropertyTypeID, NodePropertyID, NodePropertyTypeID,
+    };
     use crate::database::importer::{Lattitude, Longitude};
     use crate::database::property_manager::PropertyIdentifier;
-    use crate::database::graph::node::NodeData;
-    use crate::database::graph::edge::EdgeData;
 
     fn node_prop(id: usize) -> PropertyIdentifier<NodePropertyID, NodePropertyTypeID> {
-        PropertyIdentifier { id: NodePropertyID::from(id), type_id: NodePropertyTypeID::from(1) }
+        PropertyIdentifier {
+            id: NodePropertyID::from(id),
+            type_id: NodePropertyTypeID::from(1),
+        }
     }
     fn edge_prop(id: usize) -> PropertyIdentifier<EdgePropertyID, EdgePropertyTypeID> {
-        PropertyIdentifier { id: EdgePropertyID::from(id), type_id: EdgePropertyTypeID::from(1) }
+        PropertyIdentifier {
+            id: EdgePropertyID::from(id),
+            type_id: EdgePropertyTypeID::from(1),
+        }
     }
 
     fn lat(id: usize) -> Lattitude {
@@ -25,18 +33,28 @@ mod test {
         Longitude::from(OrderedFloat(id as f64))
     }
 
-
     #[test]
     fn test_add_multiple_nodes() {
         let mut graph = Graph::new();
-        let id1 = graph.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let id2 = graph.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        let id3 = graph.add_node(NodeData { property: node_prop(3), lat: lat(3), lon: lon(3) });
+        let id1 = graph.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let id2 = graph.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        let id3 = graph.add_node(NodeData {
+            property: node_prop(3),
+            lat: lat(3),
+            lon: lon(3),
+        });
 
         assert_eq!(graph.get_node(id1).property, node_prop(1));
         assert_eq!(graph.get_node(id2).property, node_prop(2));
         assert_eq!(graph.get_node(id3).property, node_prop(3));
-
 
         assert_eq!(graph.get_node(id1).lon, lon(1));
         assert_eq!(graph.get_node(id2).lon, lon(2));
@@ -50,9 +68,25 @@ mod test {
     #[test]
     fn test_add_directed_edge() {
         let mut graph = Graph::new();
-        let n1 = graph.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = graph.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        let edge_id = graph.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
+        let n1 = graph.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = graph.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        let edge_id = graph.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
         assert_eq!(graph.get_edge(edge_id).property, edge_prop(10));
     }
@@ -60,9 +94,25 @@ mod test {
     #[test]
     fn test_add_undirected_edge() {
         let mut graph = Graph::new();
-        let n1 = graph.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = graph.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        let edge_id = graph.add_edge(n1, n2, EdgeData { property: edge_prop(100), kind: EdgeKind::Undirected, cost: 0.0.into() });
+        let n1 = graph.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = graph.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        let edge_id = graph.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(100),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
 
         assert_eq!(graph.get_edge(edge_id).property, edge_prop(100));
     }
@@ -70,13 +120,49 @@ mod test {
     #[test]
     fn test_multiple_edges() {
         let mut graph = Graph::new();
-        let n1 = graph.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = graph.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        let n3 = graph.add_node(NodeData { property: node_prop(3), lat: lat(3), lon: lon(3) });
+        let n1 = graph.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = graph.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        let n3 = graph.add_node(NodeData {
+            property: node_prop(3),
+            lat: lat(3),
+            lon: lon(3),
+        });
 
-        let e1 = graph.add_edge(n1, n2, EdgeData { property: edge_prop(15), kind: EdgeKind::Directed, cost: 0.0.into() });
-        let e2 = graph.add_edge(n2, n3, EdgeData { property: edge_prop(25), kind: EdgeKind::Directed, cost: 0.0.into() });
-        let e3 = graph.add_edge(n1, n3, EdgeData { property: edge_prop(35), kind: EdgeKind::Undirected, cost: 0.0.into() });
+        let e1 = graph.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(15),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
+        let e2 = graph.add_edge(
+            n2,
+            n3,
+            EdgeData {
+                property: edge_prop(25),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
+        let e3 = graph.add_edge(
+            n1,
+            n3,
+            EdgeData {
+                property: edge_prop(35),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
 
         assert_eq!(graph.get_edge(e1).property, edge_prop(15));
         assert_eq!(graph.get_edge(e2).property, edge_prop(25));
@@ -86,9 +172,25 @@ mod test {
     #[test]
     fn test_add_edge_registers_on_nodes() {
         let mut graph = Graph::new();
-        let n1 = graph.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = graph.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        let e1 = graph.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
+        let n1 = graph.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = graph.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        let e1 = graph.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
         assert!(graph.node_store.get(n1).edges.contains(&e1));
         assert!(graph.node_store.get(n2).edges.contains(&e1));
@@ -97,9 +199,25 @@ mod test {
     #[test]
     fn test_delete_existing_edge() {
         let mut graph = Graph::new();
-        let n1 = graph.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = graph.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        let e1 = graph.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
+        let n1 = graph.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = graph.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        let e1 = graph.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
         graph.delete_edge(e1);
 
@@ -109,12 +227,40 @@ mod test {
     #[test]
     fn test_delete_edge_preserves_other_edges() {
         let mut graph = Graph::new();
-        let n1 = graph.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = graph.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        let n3 = graph.add_node(NodeData { property: node_prop(3), lat: lat(3), lon: lon(3) });
+        let n1 = graph.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = graph.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        let n3 = graph.add_node(NodeData {
+            property: node_prop(3),
+            lat: lat(3),
+            lon: lon(3),
+        });
 
-        let e1 = graph.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
-        let e2 = graph.add_edge(n2, n3, EdgeData { property: edge_prop(20), kind: EdgeKind::Directed, cost: 0.0.into() });
+        let e1 = graph.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
+        let e2 = graph.add_edge(
+            n2,
+            n3,
+            EdgeData {
+                property: edge_prop(20),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
         graph.delete_edge(e1);
 
@@ -124,9 +270,25 @@ mod test {
     #[test]
     fn test_delete_edge_preserves_nodes() {
         let mut graph = Graph::new();
-        let n1 = graph.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = graph.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        let e1 = graph.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
+        let n1 = graph.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = graph.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        let e1 = graph.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
         graph.delete_edge(e1);
 
@@ -137,12 +299,44 @@ mod test {
     #[test]
     fn test_delete_all_edges() {
         let mut graph = Graph::new();
-        let n1 = graph.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = graph.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
+        let n1 = graph.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = graph.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
 
-        let e1 = graph.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
-        let e2 = graph.add_edge(n1, n2, EdgeData { property: edge_prop(20), kind: EdgeKind::Directed, cost: 0.0.into() });
-        let e3 = graph.add_edge(n1, n2, EdgeData { property: edge_prop(30), kind: EdgeKind::Undirected, cost: 0.0.into() });
+        let e1 = graph.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
+        let e2 = graph.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(20),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
+        let e3 = graph.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(30),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
 
         graph.delete_edge(e1);
         graph.delete_edge(e2);
@@ -163,13 +357,45 @@ mod test {
         let mut g1 = Graph::new();
         let mut g2 = Graph::new();
 
-        let n1 = g1.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = g1.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        g1.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
+        let n1 = g1.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = g1.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        g1.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
-        let m1 = g2.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let m2 = g2.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        g2.add_edge(m1, m2, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
+        let m1 = g2.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let m2 = g2.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        g2.add_edge(
+            m1,
+            m2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
         assert_eq!(g1, g2);
     }
@@ -179,13 +405,45 @@ mod test {
         let mut g1 = Graph::new();
         let mut g2 = Graph::new();
 
-        let n1 = g1.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = g1.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        g1.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
+        let n1 = g1.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = g1.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        g1.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
-        let m1 = g2.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let m2 = g2.add_node(NodeData { property: node_prop(3), lat: lat(3), lon: lon(3) });
-        g2.add_edge(m1, m2, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
+        let m1 = g2.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let m2 = g2.add_node(NodeData {
+            property: node_prop(3),
+            lat: lat(3),
+            lon: lon(3),
+        });
+        g2.add_edge(
+            m1,
+            m2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
         assert_ne!(g1, g2);
     }
@@ -195,13 +453,45 @@ mod test {
         let mut g1 = Graph::new();
         let mut g2 = Graph::new();
 
-        let n1 = g1.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = g1.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        g1.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
+        let n1 = g1.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = g1.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        g1.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
-        let m1 = g2.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let m2 = g2.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        g2.add_edge(m1, m2, EdgeData { property: edge_prop(20), kind: EdgeKind::Directed, cost: 0.0.into() });
+        let m1 = g2.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let m2 = g2.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        g2.add_edge(
+            m1,
+            m2,
+            EdgeData {
+                property: edge_prop(20),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
         assert_ne!(g1, g2);
     }
@@ -211,13 +501,45 @@ mod test {
         let mut g1 = Graph::new();
         let mut g2 = Graph::new();
 
-        let n1 = g1.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = g1.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        g1.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Undirected, cost: 0.0.into() });
+        let n1 = g1.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = g1.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        g1.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
 
-        let m1 = g2.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let m2 = g2.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        g2.add_edge(m2, m1, EdgeData { property: edge_prop(10), kind: EdgeKind::Undirected, cost: 0.0.into() });
+        let m1 = g2.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let m2 = g2.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        g2.add_edge(
+            m2,
+            m1,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
 
         assert_eq!(g1, g2);
     }
@@ -227,51 +549,157 @@ mod test {
         let mut g1 = Graph::new();
         let mut g2 = Graph::new();
 
-        let n1 = g1.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = g1.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        g1.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
+        let n1 = g1.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = g1.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        g1.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
-        let m1 = g2.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let m2 = g2.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        g2.add_edge(m2, m1, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
+        let m1 = g2.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let m2 = g2.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        g2.add_edge(
+            m2,
+            m1,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
         assert_ne!(g1, g2);
     }
 
     #[test]
-    fn test_different_graphs_equality_edge_undirected_different_node_order_different_construction() {
+    fn test_different_graphs_equality_edge_undirected_different_node_order_different_construction()
+    {
         let mut g1 = Graph::new();
         let mut g2 = Graph::new();
 
-        let n1 = g1.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = g1.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        g1.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Undirected, cost: 0.0.into() });
+        let n1 = g1.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = g1.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        g1.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
 
-        let m1 = g2.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let dummy_node = g2.add_node(NodeData { property: node_prop(10), lat: lat(10), lon: lon(10) });
-        let m2 = g2.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
+        let m1 = g2.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let dummy_node = g2.add_node(NodeData {
+            property: node_prop(10),
+            lat: lat(10),
+            lon: lon(10),
+        });
+        let m2 = g2.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
 
         g2.delete_node(dummy_node);
-        g2.add_edge(m2, m1, EdgeData { property: edge_prop(10), kind: EdgeKind::Undirected, cost: 0.0.into() });
+        g2.add_edge(
+            m2,
+            m1,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
 
         assert_eq!(g1, g2);
     }
 
     #[test]
-    fn test_different_graphs_inequality_different_node_order_on_edge_directed_different_construction() {
+    fn test_different_graphs_inequality_different_node_order_on_edge_directed_different_construction()
+     {
         let mut g1 = Graph::new();
         let mut g2 = Graph::new();
 
-        let n1 = g1.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = g1.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        g1.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
+        let n1 = g1.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = g1.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        g1.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
-        let m1 = g2.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let dummy_node = g2.add_node(NodeData { property: node_prop(10), lat: lat(10), lon: lon(10) });
-        let m2 = g2.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
+        let m1 = g2.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let dummy_node = g2.add_node(NodeData {
+            property: node_prop(10),
+            lat: lat(10),
+            lon: lon(10),
+        });
+        let m2 = g2.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
 
         g2.delete_node(dummy_node);
-        g2.add_edge(m2, m1, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
+        g2.add_edge(
+            m2,
+            m1,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
         assert_ne!(g1, g2);
     }
@@ -281,16 +709,52 @@ mod test {
         let mut g1 = Graph::new();
         let mut g2 = Graph::new();
 
-        let n1 = g1.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = g1.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        g1.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
+        let n1 = g1.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = g1.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        g1.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
-        let m1 = g2.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let dummy_node = g2.add_node(NodeData { property: node_prop(10), lat: lat(10), lon: lon(10) });
-        let m2 = g2.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
+        let m1 = g2.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let dummy_node = g2.add_node(NodeData {
+            property: node_prop(10),
+            lat: lat(10),
+            lon: lon(10),
+        });
+        let m2 = g2.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
 
         g2.delete_node(dummy_node);
-        g2.add_edge(m1, m2, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() });
+        g2.add_edge(
+            m1,
+            m2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
         assert_eq!(g1, g2);
     }
@@ -301,19 +765,75 @@ mod test {
         let mut g1 = Graph::new();
         let mut g2 = Graph::new();
 
-        let a = g1.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let b = g1.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        let c = g1.add_node(NodeData { property: node_prop(3), lat: lat(3), lon: lon(3) });
+        let a = g1.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let b = g1.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        let c = g1.add_node(NodeData {
+            property: node_prop(3),
+            lat: lat(3),
+            lon: lon(3),
+        });
 
-        g1.add_edge(a, b, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() }); // 1 → 2
-        g1.add_edge(c, a, EdgeData { property: edge_prop(20), kind: EdgeKind::Directed, cost: 0.0.into() }); // 3 → 1
+        g1.add_edge(
+            a,
+            b,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        ); // 1 → 2
+        g1.add_edge(
+            c,
+            a,
+            EdgeData {
+                property: edge_prop(20),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        ); // 3 → 1
 
-        let x = g2.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let y = g2.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        let z = g2.add_node(NodeData { property: node_prop(3), lat: lat(3), lon: lon(3) });
+        let x = g2.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let y = g2.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        let z = g2.add_node(NodeData {
+            property: node_prop(3),
+            lat: lat(3),
+            lon: lon(3),
+        });
 
-        g2.add_edge(y, x, EdgeData { property: edge_prop(10), kind: EdgeKind::Directed, cost: 0.0.into() }); // 2 → 1
-        g2.add_edge(x, z, EdgeData { property: edge_prop(20), kind: EdgeKind::Directed, cost: 0.0.into() }); // 1 → 3
+        g2.add_edge(
+            y,
+            x,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        ); // 2 → 1
+        g2.add_edge(
+            x,
+            z,
+            EdgeData {
+                property: edge_prop(20),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        ); // 1 → 3
 
         assert_ne!(g1, g2);
     }
@@ -321,14 +841,42 @@ mod test {
     #[test]
     fn parallel_edges_between_nodes_are_allowed_and_counted() {
         let mut g = Graph::new();
-        let n1 = g.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = g.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
+        let n1 = g.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = g.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
 
-        let e1 = g.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Undirected, cost: 0.0.into() });
-        let e2 = g.add_edge(n1, n2, EdgeData { property: edge_prop(10), kind: EdgeKind::Undirected, cost: 0.0.into() });
+        let e1 = g.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
+        let e2 = g.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(10),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
 
         let edges = g.get_edges_between(n1, n2);
-        assert_eq!(edges.len(), 2, "there should be two parallel edges between n1 and n2");
+        assert_eq!(
+            edges.len(),
+            2,
+            "there should be two parallel edges between n1 and n2"
+        );
         assert!(edges.contains(&e1) && edges.contains(&e2));
         assert_eq!(g.get_edge(e1).property, edge_prop(10));
         assert_eq!(g.get_edge(e2).property, edge_prop(10));
@@ -337,11 +885,35 @@ mod test {
     #[test]
     fn deleting_one_parallel_edge_leaves_the_other() {
         let mut g = Graph::new();
-        let a = g.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let b = g.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
+        let a = g.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let b = g.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
 
-        let e1 = g.add_edge(a, b, EdgeData { property: edge_prop(7), kind: EdgeKind::Undirected, cost: 0.0.into() });
-        let e2 = g.add_edge(a, b, EdgeData { property: edge_prop(7), kind: EdgeKind::Undirected, cost: 0.0.into() });
+        let e1 = g.add_edge(
+            a,
+            b,
+            EdgeData {
+                property: edge_prop(7),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
+        let e2 = g.add_edge(
+            a,
+            b,
+            EdgeData {
+                property: edge_prop(7),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
 
         g.delete_edge(e1);
 
@@ -354,12 +926,40 @@ mod test {
     #[test]
     fn delete_node_removes_incident_edges() {
         let mut g = Graph::new();
-        let a = g.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let b = g.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        let c = g.add_node(NodeData { property: node_prop(3), lat: lat(3), lon: lon(3) });
+        let a = g.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let b = g.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        let c = g.add_node(NodeData {
+            property: node_prop(3),
+            lat: lat(3),
+            lon: lon(3),
+        });
 
-        let e1 = g.add_edge(a, b, EdgeData { property: edge_prop(100), kind: EdgeKind::Undirected, cost: 0.0.into() });
-        let e2 = g.add_edge(b, c, EdgeData { property: edge_prop(200), kind: EdgeKind::Undirected, cost: 0.0.into() });
+        let e1 = g.add_edge(
+            a,
+            b,
+            EdgeData {
+                property: edge_prop(100),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
+        let e2 = g.add_edge(
+            b,
+            c,
+            EdgeData {
+                property: edge_prop(200),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
 
         g.delete_node(b);
 
@@ -376,28 +976,96 @@ mod test {
     #[test]
     fn directed_edges_respect_direction() {
         let mut g = Graph::new();
-        let n1 = g.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let n2 = g.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
+        let n1 = g.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let n2 = g.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
 
-        g.add_edge(n1, n2, EdgeData { property: edge_prop(1), kind: EdgeKind::Directed, cost: 0.0.into() });
+        g.add_edge(
+            n1,
+            n2,
+            EdgeData {
+                property: edge_prop(1),
+                kind: EdgeKind::Directed,
+                cost: 0.0.into(),
+            },
+        );
 
         assert_eq!(g.get_edges_between(n1, n2).len(), 1);
-        assert_eq!(g.get_edges_between(n2, n1).len(), 0, "directed edge should not be found in reverse direction");
+        assert_eq!(
+            g.get_edges_between(n2, n1).len(),
+            0,
+            "directed edge should not be found in reverse direction"
+        );
     }
 
     #[test]
     fn partial_eq_considers_edge_multiplicity() {
         let mut g1 = Graph::new();
-        let a1 = g1.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let b1 = g1.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        g1.add_edge(a1, b1, EdgeData { property: edge_prop(5), kind: EdgeKind::Undirected, cost: 0.0.into() });
-        g1.add_edge(a1, b1, EdgeData { property: edge_prop(5), kind: EdgeKind::Undirected, cost: 0.0.into() });
+        let a1 = g1.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let b1 = g1.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        g1.add_edge(
+            a1,
+            b1,
+            EdgeData {
+                property: edge_prop(5),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
+        g1.add_edge(
+            a1,
+            b1,
+            EdgeData {
+                property: edge_prop(5),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
 
         let mut g2 = Graph::new();
-        let a2 = g2.add_node(NodeData { property: node_prop(1), lat: lat(1), lon: lon(1) });
-        let b2 = g2.add_node(NodeData { property: node_prop(2), lat: lat(2), lon: lon(2) });
-        g2.add_edge(a2, b2, EdgeData { property: edge_prop(5), kind: EdgeKind::Undirected, cost: 0.0.into() });
-        g2.add_edge(a2, b2, EdgeData { property: edge_prop(5), kind: EdgeKind::Undirected, cost: 0.0.into() });
+        let a2 = g2.add_node(NodeData {
+            property: node_prop(1),
+            lat: lat(1),
+            lon: lon(1),
+        });
+        let b2 = g2.add_node(NodeData {
+            property: node_prop(2),
+            lat: lat(2),
+            lon: lon(2),
+        });
+        g2.add_edge(
+            a2,
+            b2,
+            EdgeData {
+                property: edge_prop(5),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
+        g2.add_edge(
+            a2,
+            b2,
+            EdgeData {
+                property: edge_prop(5),
+                kind: EdgeKind::Undirected,
+                cost: 0.0.into(),
+            },
+        );
 
         assert_eq!(g1, g2);
 

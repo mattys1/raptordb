@@ -1,15 +1,18 @@
 use std::hash::Hash;
 
-use derive_more::{Display, Eq, From};
+use derive_more::Eq;
 use ordered_float::OrderedFloat;
 use serde_json::Number;
 
-use crate::database::{id::{EdgeID, EdgePropertyID, EdgePropertyTypeID, NodeID}, property_manager::PropertyIdentifier};
+use crate::database::{
+    id::{EdgeID, EdgePropertyID, EdgePropertyTypeID, NodeID},
+    property_manager::PropertyIdentifier,
+};
 
 #[derive(Debug, PartialEq, Clone, Copy, Hash, Eq)]
 pub enum EdgeKind {
     Directed,
-    Undirected
+    Undirected,
 }
 
 #[derive(Debug, Clone, Copy, Eq)]
@@ -22,12 +25,14 @@ pub(crate) struct Edge {
     pub(super) data: EdgeData,
 }
 
-pub(super) type EdgeProperty = PropertyIdentifier<EdgePropertyID, EdgePropertyTypeID>; 
+pub(super) type EdgeProperty = PropertyIdentifier<EdgePropertyID, EdgePropertyTypeID>;
 
 // TODO: move edge and node comparision into the graph itself, so that elements dependant on id can also be compared
-impl PartialEq for Edge where {
+impl PartialEq for Edge {
     fn eq(&self, other: &Self) -> bool {
-        self.data.kind == other.data.kind && self.data.property == other.data.property && self.data.cost == other.data.cost //&& match self.kind {
+        self.data.kind == other.data.kind
+            && self.data.property == other.data.property
+            && self.data.cost == other.data.cost //&& match self.kind {
         //     EdgeKind::Directed => self.from == other.from && self.to == other.to,
         //     EdgeKind::Undirected => (self.from == other.from && self.to == other.to) || (self.from == other.to && self.to == other.from)
         // }
@@ -35,7 +40,7 @@ impl PartialEq for Edge where {
 }
 
 // TODO: for now graph comparision relies on this but it would be better to hash everything probably
-impl Hash for Edge where {
+impl Hash for Edge {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.data.kind.hash(state);
         self.data.property.hash(state);
@@ -62,5 +67,5 @@ impl From<f64> for EdgeCost {
 pub(super) struct EdgeData {
     pub(super) cost: EdgeCost,
     pub(super) kind: EdgeKind,
-    pub(super) property: EdgeProperty
+    pub(super) property: EdgeProperty,
 }
