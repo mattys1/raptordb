@@ -28,4 +28,3 @@ new_id!(EdgeProperty);
 new_id!(EdgePropertyType);
 
 new_id!(Cluster);
-new_id!(String);

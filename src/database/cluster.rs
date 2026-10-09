@@ -1,9 +1,26 @@
 use std::fmt::{self, Display};
 
-use crate::database::{
-    id::{ClusterID, StringID},
-    store::Store,
-};
+use derive_more::Into;
+
+use crate::database::{id::ClusterID, store::Store};
+
+/// First cluster of a chain. Only [`ClusterPool::alloc_empty`] and [`ClusterPool::alloc_chain`] construct it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct ChainID(ClusterID);
+
+impl ChainID {
+    fn cluster(self) -> ClusterID {
+        self.0
+    }
+}
+
+/// Id of one string. Wraps the chain that stores its bytes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Into)]
+pub(super) struct StringID(ChainID);
+
+/// Id of one node's incident edges. Wraps the chain that stores them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Into)]
+pub(super) struct AdjacencyID(ChainID);
 
 #[derive(Clone, Copy)]
 struct Cluster<T, const SIZE: usize>
@@ -41,7 +58,7 @@ where
     }
 }
 
-/// Arena of fixed-size clusters. Callers pass a real [`ClusterID`]; an empty chain is the caller's concern.
+/// Arena of fixed-size clusters. Chain operations take a [`ChainID`]. Links between clusters stay [`ClusterID`].
 struct ClusterPool<T, const SIZE: usize>
 where
     T: Copy + Default,
@@ -60,17 +77,17 @@ where
         }
     }
 
-    /// Allocate one cluster with no filled slots.
-    fn alloc_empty(&mut self) -> ClusterID {
-        self.clusters.add(Cluster::empty())
+    /// Allocate one empty chain.
+    fn alloc_empty(&mut self) -> ChainID {
+        ChainID(self.clusters.add(Cluster::empty()))
     }
 
     /// Pack `values` into a new chain. Returns `None` and allocates nothing when `values` is empty.
-    fn alloc_chain(&mut self, values: impl IntoIterator<Item = T>) -> Option<ClusterID> {
+    fn alloc_chain(&mut self, values: impl IntoIterator<Item = T>) -> Option<ChainID> {
         let mut values = values.into_iter().peekable();
         values.peek()?;
 
-        let mut head: Option<ClusterID> = None;
+        let mut first: Option<ClusterID> = None;
         let mut tail: Option<ClusterID> = None;
 
         while values.peek().is_some() {
@@ -88,8 +105,8 @@ where
             cluster.count = count;
 
             let id = self.clusters.add(cluster);
-            if head.is_none() {
-                head = Some(id);
+            if first.is_none() {
+                first = Some(id);
             }
             if let Some(tail_id) = tail {
                 self.clusters.get_mut(tail_id).next = Some(id);
@@ -97,12 +114,17 @@ where
             tail = Some(id);
         }
 
-        head
+        first.map(ChainID)
     }
 
-    /// Free `head` and every cluster linked from it.
-    fn free_chain(&mut self, head: ClusterID) {
-        let mut current = Some(head);
+    /// Free every cluster in the chain, starting at its first cluster.
+    fn free_chain(&mut self, chain: ChainID) {
+        self.free_suffix(chain.cluster());
+    }
+
+    /// Free this cluster and every cluster linked after it.
+    fn free_suffix(&mut self, start: ClusterID) {
+        let mut current = Some(start);
         while let Some(id) = current {
             let next = self.clusters.get(id).next;
             self.clusters.remove(id);
@@ -110,10 +132,10 @@ where
         }
     }
 
-    /// Number of filled slots in the chain starting at `head`.
-    fn len(&self, head: ClusterID) -> usize {
+    /// Number of filled slots in the chain.
+    fn len(&self, chain: ChainID) -> usize {
         let mut total = 0;
-        let mut current = Some(head);
+        let mut current = Some(chain.cluster());
         while let Some(id) = current {
             let cluster = self.clusters.get(id);
             total += cluster.count;
@@ -122,8 +144,8 @@ where
         total
     }
 
-    fn locate(&self, head: ClusterID, mut index: usize) -> Option<(ClusterID, usize)> {
-        let mut current = Some(head);
+    fn locate(&self, chain: ChainID, mut index: usize) -> Option<(ClusterID, usize)> {
+        let mut current = Some(chain.cluster());
         while let Some(id) = current {
             let cluster = self.clusters.get(id);
             let count = cluster.count;
@@ -137,29 +159,29 @@ where
     }
 
     /// Slot at `index`, counting from the start of the chain. `None` when `index` is past the end.
-    fn get(&self, head: ClusterID, index: usize) -> Option<&T> {
-        let (id, inner) = self.locate(head, index)?;
+    fn get(&self, chain: ChainID, index: usize) -> Option<&T> {
+        let (id, inner) = self.locate(chain, index)?;
         Some(&self.clusters.get(id).contents[inner])
     }
 
     /// Mutable slot at `index`. `None` when `index` is past the end.
-    fn get_mut(&mut self, head: ClusterID, index: usize) -> Option<&mut T> {
-        let (id, inner) = self.locate(head, index)?;
+    fn get_mut(&mut self, chain: ChainID, index: usize) -> Option<&mut T> {
+        let (id, inner) = self.locate(chain, index)?;
         Some(&mut self.clusters.get_mut(id).contents[inner])
     }
 
-    /// Filled slots from `head` to the end of the chain, in order.
-    fn iter<'a>(&'a self, head: ClusterID) -> ClusterIter<'a, T, SIZE> {
+    /// Filled slots from the start of the chain to its end, in order.
+    fn iter<'a>(&'a self, chain: ChainID) -> ClusterIter<'a, T, SIZE> {
         ClusterIter {
             pool: self,
-            cluster_id: Some(head),
+            cluster_id: Some(chain.cluster()),
             index_in_cluster: 0,
         }
     }
 
-    /// Append `value` to an existing chain. Allocates a new tail cluster when the last one is full. `head` does not change.
-    fn push(&mut self, head: ClusterID, value: T) {
-        let mut current = head;
+    /// Append `value` to the chain. Allocates a new tail cluster when the last one is full.
+    fn push(&mut self, chain: ChainID, value: T) {
+        let mut current = chain.cluster();
         loop {
             let next = self.clusters.get(current).next;
             match next {
@@ -182,35 +204,35 @@ where
 
     /// Remove the slot at `index` and close the gap.
     ///
-    /// [`ChainRemoval::Kept`] leaves `head` valid. [`ChainRemoval::Emptied`] means the chain was freed and `head` must be dropped.
+    /// [`ChainRemoval::Kept`] leaves `chain` valid. [`ChainRemoval::Emptied`] means the chain was freed and `chain` must be dropped.
     /// `None` when `index` is past the end.
-    fn remove_at(&mut self, head: ClusterID, index: usize) -> Option<ChainRemoval<T>> {
-        let len = self.len(head);
+    fn remove_at(&mut self, chain: ChainID, index: usize) -> Option<ChainRemoval<T>> {
+        let len = self.len(chain);
         if index >= len {
             return None;
         }
 
-        let removed = *self.get(head, index)?;
+        let removed = *self.get(chain, index)?;
         for i in index..len - 1 {
-            let next = *self.get(head, i + 1)?;
-            let slot = self.get_mut(head, i)?;
+            let next = *self.get(chain, i + 1)?;
+            let slot = self.get_mut(chain, i)?;
             *slot = next;
         }
 
         if len == 1 {
-            self.free_chain(head);
+            self.free_chain(chain);
             Some(ChainRemoval::Emptied(removed))
         } else {
-            self.truncate_to_len(head, len - 1);
+            self.truncate_to_len(chain, len - 1);
             Some(ChainRemoval::Kept(removed))
         }
     }
 
-    fn truncate_to_len(&mut self, head: ClusterID, new_len: usize) {
+    fn truncate_to_len(&mut self, chain: ChainID, new_len: usize) {
         debug_assert!(new_len > 0, "an empty chain is freed by the caller");
 
         let mut remaining = new_len;
-        let mut current = Some(head);
+        let mut current = Some(chain.cluster());
 
         while let Some(id) = current {
             let next = self.clusters.get(id).next;
@@ -218,7 +240,7 @@ where
                 self.clusters.get_mut(id).count = remaining;
                 self.clusters.get_mut(id).next = None;
                 if let Some(next_id) = next {
-                    self.free_chain(next_id);
+                    self.free_suffix(next_id);
                 }
                 break;
             }
@@ -230,10 +252,10 @@ where
 }
 
 /// Result of removing one slot from a chain.
-enum ChainRemoval<T> {
-    /// The chain still starts at the same head.
+pub(super) enum ChainRemoval<T> {
+    /// The chain id is still valid.
     Kept(T),
-    /// The last slot was removed and the chain was freed.
+    /// The last slot was removed and the chain was freed. The id is no longer valid.
     Emptied(T),
 }
 
@@ -266,7 +288,7 @@ where
     }
 }
 
-/// Incident edges for a node. The node holds the chain head; `None` means the node has no edges.
+/// Incident edges for a node. Each chain is addressed by an [`AdjacencyID`].
 pub(super) struct AdjacencyStore<E, const SIZE: usize>
 where
     E: Copy + Default,
@@ -285,83 +307,56 @@ where
         }
     }
 
-    /// Number of edges in the chain. `None` is `0`.
-    pub fn len(&self, head: Option<ClusterID>) -> usize {
-        match head {
-            Some(id) => self.pool.len(id),
-            None => 0,
-        }
+    /// Start a chain containing `value`.
+    pub fn add(&mut self, value: E) -> AdjacencyID {
+        let chain = self
+            .pool
+            .alloc_chain(std::iter::once(value))
+            .expect("one value produces a chain");
+        AdjacencyID(chain)
     }
 
-    /// Edge at `index`. `None` when `head` is `None` or `index` is past the end.
-    pub fn get(&self, head: Option<ClusterID>, index: usize) -> Option<&E> {
-        self.pool.get(head?, index)
+    /// Number of edges in the chain.
+    pub fn len(&self, id: AdjacencyID) -> usize {
+        self.pool.len(id.into())
     }
 
-    /// Mutable edge at `index`. `None` when `head` is `None` or `index` is past the end.
-    pub fn get_mut(&mut self, head: Option<ClusterID>, index: usize) -> Option<&mut E> {
-        self.pool.get_mut(head?, index)
+    /// Edge at `index`. `None` when `index` is past the end.
+    pub fn get(&self, id: AdjacencyID, index: usize) -> Option<&E> {
+        self.pool.get(id.into(), index)
     }
 
-    /// Edges in chain order. `None` yields nothing.
-    pub fn iter<'a>(&'a self, head: Option<ClusterID>) -> AdjacencyIter<'a, E, SIZE> {
-        AdjacencyIter {
-            inner: head.map(|id| self.pool.iter(id)),
-        }
+    /// Mutable edge at `index`. `None` when `index` is past the end.
+    pub fn get_mut(&mut self, id: AdjacencyID, index: usize) -> Option<&mut E> {
+        self.pool.get_mut(id.into(), index)
     }
 
-    /// Append `value`. When `head` is `None`, allocates the first cluster and writes its id back.
-    pub fn push(&mut self, head: &mut Option<ClusterID>, value: E) {
-        match *head {
-            Some(id) => self.pool.push(id, value),
-            None => *head = self.pool.alloc_chain(std::iter::once(value)),
-        }
+    /// Edges in chain order.
+    pub fn iter(&self, id: AdjacencyID) -> impl Iterator<Item = &E> + '_ {
+        self.pool.iter(id.into())
     }
 
-    /// Remove the edge at `index` and close the gap. Sets `head` to `None` when the last edge is removed.
-    /// `None` when `head` is `None` or `index` is past the end.
-    pub fn remove_at(&mut self, head: &mut Option<ClusterID>, index: usize) -> Option<E> {
-        let id = (*head)?;
-        match self.pool.remove_at(id, index)? {
-            ChainRemoval::Kept(value) => Some(value),
-            ChainRemoval::Emptied(value) => {
-                *head = None;
-                Some(value)
-            }
-        }
+    /// Append `value` to the chain.
+    pub fn push(&mut self, id: AdjacencyID, value: E) {
+        self.pool.push(id.into(), value);
     }
 
-    /// Free the whole chain and set `head` to `None`. Does nothing when `head` is already `None`.
-    pub fn free_chain(&mut self, head: &mut Option<ClusterID>) {
-        if let Some(id) = *head {
-            self.pool.free_chain(id);
-            *head = None;
-        }
+    /// Remove the edge at `index` and close the gap.
+    ///
+    /// [`ChainRemoval::Emptied`] means `id` is no longer valid. `None` when `index` is past the end.
+    pub fn remove_at(&mut self, id: AdjacencyID, index: usize) -> Option<ChainRemoval<E>> {
+        self.pool.remove_at(id.into(), index)
+    }
+
+    /// Free the chain. `id` is no longer valid.
+    pub fn free(&mut self, id: AdjacencyID) {
+        self.pool.free_chain(id.into());
     }
 }
 
-struct AdjacencyIter<'a, E, const SIZE: usize>
-where
-    E: Copy + Default,
-{
-    inner: Option<ClusterIter<'a, E, SIZE>>,
-}
-
-impl<'a, E, const SIZE: usize> Iterator for AdjacencyIter<'a, E, SIZE>
-where
-    E: Copy + Default,
-{
-    type Item = &'a E;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.as_mut()?.next()
-    }
-}
-
-/// Strings split across clusters. Callers only see [`StringID`].
 pub(super) struct StringStore<const SIZE: usize> {
     pool: ClusterPool<u8, SIZE>,
-    heads: Store<ClusterID, StringID>,
+    count: usize,
 }
 
 impl<const SIZE: usize> StringStore<SIZE> {
@@ -369,51 +364,66 @@ impl<const SIZE: usize> StringStore<SIZE> {
     pub fn new() -> Self {
         Self {
             pool: ClusterPool::new(),
-            heads: Store::new(),
+            count: 0,
         }
     }
 
     /// Store `value` and return its id. An empty string still gets an id.
     pub fn add(&mut self, value: &str) -> StringID {
-        let bytes = pack_utf8_chunks(value, SIZE).into_iter().flatten();
-        let head = self
+        let bytes = Self::pack_utf8_chunks(value).into_iter().flatten();
+        let chain = self
             .pool
             .alloc_chain(bytes)
             .unwrap_or_else(|| self.pool.alloc_empty());
-        self.heads.add(head)
+        self.count += 1;
+        StringID(chain)
     }
 
-    /// Delete the string and free its clusters.
+    /// Delete the string and free its clusters. `id` is no longer valid.
     pub fn remove(&mut self, id: StringID) {
-        let head = *self.heads.get(id);
-        self.pool.free_chain(head);
-        self.heads.remove(id);
+        self.pool.free_chain(id.into());
+        self.count -= 1;
     }
 
     /// Borrowed view of the string. Does not copy the bytes.
     pub fn get<'a>(&'a self, id: StringID) -> ClusteredStr<'a, SIZE> {
         ClusteredStr {
             pool: &self.pool,
-            head: *self.heads.get(id),
+            chain: id.into(),
         }
     }
 
     /// Number of stored strings.
     pub fn len(&self) -> usize {
-        self.heads.len()
+        self.count
+    }
+
+    /// Split `value` into chunks of at most `SIZE` bytes, each ending on a char boundary.
+    fn pack_utf8_chunks(value: &str) -> Vec<Vec<u8>> {
+        let mut chunks = Vec::new();
+        let mut start = 0;
+        while start < value.len() {
+            let mut end = (start + SIZE).min(value.len());
+            while end > start && !value.is_char_boundary(end) {
+                end -= 1;
+            }
+            chunks.push(value.as_bytes()[start..end].to_owned());
+            start = end;
+        }
+        chunks
     }
 }
 
 /// A string borrowed from a [`StringStore`]. A value split across clusters is not one `&str`.
 pub(super) struct ClusteredStr<'a, const SIZE: usize> {
     pool: &'a ClusterPool<u8, SIZE>,
-    head: ClusterID,
+    chain: ChainID,
 }
 
 impl<'a, const SIZE: usize> ClusteredStr<'a, SIZE> {
     /// Bytes in order, without copying them into a `String`.
     pub fn bytes(&self) -> impl Iterator<Item = u8> + 'a {
-        self.pool.iter(self.head).copied()
+        self.pool.iter(self.chain).copied()
     }
 
     /// Unicode scalar values in order.
@@ -427,7 +437,7 @@ impl<'a, const SIZE: usize> ClusteredStr<'a, SIZE> {
 
     /// Length in bytes.
     pub fn len(&self) -> usize {
-        self.pool.len(self.head)
+        self.pool.len(self.chain)
     }
 
     /// `true` when the string has no bytes.
@@ -437,7 +447,7 @@ impl<'a, const SIZE: usize> ClusteredStr<'a, SIZE> {
 
     /// `&str` when the whole value sits in one cluster. `None` when it spans more than one.
     pub fn as_str(&self) -> Option<&str> {
-        let cluster = self.pool.clusters.get(self.head);
+        let cluster = self.pool.clusters.get(self.chain.cluster());
         if cluster.next.is_some() {
             return None;
         }
@@ -459,7 +469,7 @@ impl<'a, const SIZE: usize> ClusteredStr<'a, SIZE> {
     fn cluster_slices(&self) -> ClusterSliceIter<'_, SIZE> {
         ClusterSliceIter {
             pool: self.pool,
-            cluster_id: Some(self.head),
+            cluster_id: Some(self.chain.cluster()),
         }
     }
 }
@@ -497,20 +507,6 @@ impl<'a, const SIZE: usize> Iterator for ClusterSliceIter<'a, SIZE> {
     }
 }
 
-fn pack_utf8_chunks(value: &str, max_bytes: usize) -> Vec<Vec<u8>> {
-    let mut chunks = Vec::new();
-    let mut start = 0;
-    while start < value.len() {
-        let mut end = (start + max_bytes).min(value.len());
-        while end > start && !value.is_char_boundary(end) {
-            end -= 1;
-        }
-        chunks.push(value[start..end].as_bytes().to_vec());
-        start = end;
-    }
-    chunks
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -519,12 +515,12 @@ mod tests {
     #[test]
     fn adjacency_push_and_iterate() {
         let mut store = AdjacencyStore::<EdgeID, 4>::new();
-        let mut head = None;
-        for i in 0..6 {
-            store.push(&mut head, EdgeID::from(i));
+        let id = store.add(EdgeID::from(0));
+        for i in 1..6 {
+            store.push(id, EdgeID::from(i));
         }
-        assert_eq!(store.len(head), 6);
-        let ids: Vec<_> = store.iter(head).copied().collect();
+        assert_eq!(store.len(id), 6);
+        let ids: Vec<_> = store.iter(id).copied().collect();
         assert_eq!(ids.len(), 6);
         assert_eq!(usize::from(ids[0]), 0);
         assert_eq!(usize::from(ids[5]), 5);
@@ -533,14 +529,16 @@ mod tests {
     #[test]
     fn adjacency_remove_at_compacts() {
         let mut store = AdjacencyStore::<EdgeID, 4>::new();
-        let mut head = None;
-        for i in 0..5 {
-            store.push(&mut head, EdgeID::from(i));
+        let id = store.add(EdgeID::from(0));
+        for i in 1..5 {
+            store.push(id, EdgeID::from(i));
         }
-        let removed = store.remove_at(&mut head, 2).unwrap();
+        let ChainRemoval::Kept(removed) = store.remove_at(id, 2).unwrap() else {
+            panic!("chain should remain");
+        };
         assert_eq!(usize::from(removed), 2);
-        assert_eq!(store.len(head), 4);
-        let ids: Vec<usize> = store.iter(head).map(|id| (*id).into()).collect();
+        assert_eq!(store.len(id), 4);
+        let ids: Vec<usize> = store.iter(id).map(|edge| (*edge).into()).collect();
         assert_eq!(ids, vec![0, 1, 3, 4]);
     }
 
